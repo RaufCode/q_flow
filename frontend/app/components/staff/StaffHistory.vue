@@ -5,7 +5,7 @@ import { formatTime, formatDate } from '~/utils/format'
 const { history } = useStaffSession()
 const filter = ref('')
 const page = ref(1)
-const PER = 8
+const PER = 10
 
 const finalStatuses = ['SERVED', 'SKIPPED', 'CANCELLED', 'AUTO_CANCELLED']
 

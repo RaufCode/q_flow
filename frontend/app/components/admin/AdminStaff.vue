@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Loader2, Plus, KeyRound, X, Search, ShieldCheck, UserRound, Check, Copy, Eye, EyeOff } from 'lucide-vue-next'
+import { Loader2, Plus, KeyRound, X, Search, ShieldCheck, UserRound, Check, Copy, Eye, EyeOff, ChevronLeft, ChevronRight } from 'lucide-vue-next'
 import { apiGet, apiPost } from '~/utils/api'
 import { roleLabel, formatDate } from '~/utils/format'
 import { trim, isValidName, isValidEmployeeId, passwordIssues, employeeIdMessage, nameMessage } from '~/utils/validate'
@@ -104,6 +104,13 @@ const filtered = computed(() => {
       u.employeeId.toLowerCase().includes(s),
   )
 })
+
+const PER = 10
+const page = ref(1)
+const totalPages = computed(() => Math.max(1, Math.ceil(filtered.value.length / PER)))
+const paginated = computed(() => filtered.value.slice((page.value - 1) * PER, page.value * PER))
+
+watch(search, () => (page.value = 1))
 
 const handleSubmit = async () => {
   createError.value = ''
@@ -392,7 +399,7 @@ onUnmounted(() => lockScroll(false))
             <tr v-if="filtered.length === 0">
               <td colspan="6" class="px-5 py-14 text-center text-muted-foreground">No accounts found.</td>
             </tr>
-            <tr v-for="m in filtered" :key="m.id">
+            <tr v-for="m in paginated" :key="m.id">
               <td class="td whitespace-nowrap">
                 <span class="block truncate font-semibold text-foreground">{{ m.fullName }}</span>
               </td>
@@ -430,6 +437,44 @@ onUnmounted(() => lockScroll(false))
             </tr>
           </tbody>
         </table>
+      </div>
+      <div
+        v-if="totalPages > 1"
+        class="flex flex-wrap items-center justify-between gap-3 border-t border-border px-5 py-3.5"
+      >
+        <p class="text-xs text-muted-foreground">
+          Showing {{ (page - 1) * PER + 1 }}–{{ Math.min(page * PER, filtered.length) }} of {{ filtered.length }}
+        </p>
+        <div class="flex items-center gap-1">
+          <button
+            class="btn btn-outline btn-sm !px-2"
+            aria-label="Previous page"
+            :disabled="page === 1"
+            @click="page = Math.max(1, page - 1)"
+          >
+            <ChevronLeft class="h-4 w-4" />
+          </button>
+          <button
+            v-for="p in totalPages"
+            :key="p"
+            @click="page = p"
+            :aria-current="page === p ? 'page' : undefined"
+            :class="[
+              'grid h-8 w-8 place-items-center text-xs font-bold transition-colors',
+              page === p ? 'text-foreground' : 'text-muted-foreground hover:bg-muted',
+            ]"
+          >
+            {{ p }}
+          </button>
+          <button
+            class="btn btn-outline btn-sm !px-2"
+            aria-label="Next page"
+            :disabled="page === totalPages"
+            @click="page = Math.min(totalPages, page + 1)"
+          >
+            <ChevronRight class="h-4 w-4" />
+          </button>
+        </div>
       </div>
     </div>
   </div>

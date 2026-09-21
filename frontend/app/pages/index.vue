@@ -60,17 +60,17 @@ const handleSubmit = async () => {
   <div class="min-h-screen bg-bg-customer flex flex-col items-center justify-center p-4">
     <div class="w-full max-w-sm mx-auto">
       <div class="bg-card rounded-2xl border border-border shadow-sm overflow-hidden">
-        <div class="gradient-brand bg-grid px-8 pt-8 pb-9 text-center">
-          <QFlowLogo size="lg" tone="light" />
+        <div class="gradient-brand bg-grid px-8 pt-8 pb-6 text-center">
+          <QFlowLogo size="lg" tone="muted" />
         </div>
 
-        <div class="px-8 pb-8 pt-7">
+        <div class="px-8 pb-8 pt-4">
           <div class="text-center">
             <h2 class="text-xl font-bold text-foreground">Sign In</h2>
             <p class="text-sm text-muted-foreground mt-1">Sign in to access Q-Flow</p>
           </div>
 
-          <form @submit.prevent="handleSubmit" class="mt-6 space-y-4">
+          <form @submit.prevent="handleSubmit" class="mt-5 space-y-4">
             <div class="space-y-1.5">
               <label class="block text-sm font-semibold text-foreground">ID</label>
               <div class="relative">

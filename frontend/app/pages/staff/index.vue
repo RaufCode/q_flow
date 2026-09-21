@@ -44,19 +44,12 @@ provide('selectedTicketId', selectedTicketId)
 const userName = computed(() => user.value?.fullName || 'Counter Staff')
 const userRole = computed(() => overview.value?.counter?.counterName || 'Counter Staff')
 
-let timer: ReturnType<typeof setInterval> | null = null
-
 onMounted(async () => {
   await refresh()
   if (shiftRequired.value) {
     navigateTo('/staff/counter')
     return
   }
-  timer = setInterval(() => refresh(true), 8000)
-})
-
-onUnmounted(() => {
-  if (timer) clearInterval(timer)
 })
 
 watch(shiftRequired, (required) => {

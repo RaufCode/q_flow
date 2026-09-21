@@ -1,18 +1,19 @@
 <script setup lang="ts">
-import { Loader2, UserCheck, Search, Bell, XCircle, Check, SkipForward } from 'lucide-vue-next'
+import { Loader2, UserCheck, Search, ChevronLeft, ChevronRight } from 'lucide-vue-next'
 import { formatTime, channelLabel } from '~/utils/format'
 
 const emit = defineEmits<{ selectTicket: [id: string] }>()
 
-const { overview, loading, callNext, recallTicket, completeService, noShowTicket, skipTicket, trackTicket, error } = useStaffSession()
+const { overview, loading, callNext, completeService, trackTicket, error } = useStaffSession()
 const showToast = inject<(msg: string) => void>('showToast', () => {})
 const search = ref('')
 const filter = ref('')
 const calling = ref(false)
-const acting = ref<{ id: string; action: 'recall' | 'no-show' | 'complete' | 'skip' } | null>(null)
+const PER = 10
+const page = ref(1)
 
 const activeTicket = computed(() => overview.value?.activeTicket ?? null)
-const waitingCount = computed(() => overview.value?.waitingCount ?? 0)
+const waitingCount = computed(() => overview.value?.waiting?.length ?? 0)
 
 const rows = computed(() => {
   const list = [...(overview.value?.waiting ?? [])]
@@ -25,10 +26,15 @@ const rows = computed(() => {
   })
 })
 
+const totalPages = computed(() => Math.max(1, Math.ceil(rows.value.length / PER)))
+const paginated = computed(() => rows.value.slice((page.value - 1) * PER, page.value * PER))
+
+watch([search, filter], () => (page.value = 1))
+
 const handleCallNext = async () => {
   calling.value = true
   try {
-    if (activeTicket.value && ['CALLED', 'IN_SERVICE'].includes(activeTicket.value.status)) {
+    if (activeTicket.value?.status === 'IN_SERVICE') {
       await completeService(activeTicket.value.id)
     }
     const ticket = await callNext()
@@ -37,27 +43,6 @@ const handleCallNext = async () => {
     showToast(err?.message || 'Failed to call next customer')
   } finally {
     calling.value = false
-  }
-}
-
-const handleAction = async (t: any, action: 'recall' | 'no-show' | 'complete' | 'skip') => {
-  acting.value = { id: t.id, action }
-  try {
-    const ticket =
-      action === 'recall'
-        ? await recallTicket(t.id)
-        : action === 'complete'
-          ? await completeService(t.id)
-          : action === 'skip'
-            ? await skipTicket(t.id)
-            : await noShowTicket(t.id)
-    const verb =
-      action === 'recall' ? 're-notified' : action === 'complete' ? 'completed' : action === 'skip' ? 'skipped to back of queue' : 'marked as no-show'
-    if (ticket) showToast(`${ticket.ticketNumber} ${verb} — ${ticket.customerName}`)
-  } catch (err: any) {
-    showToast(err?.message || `Failed to ${action} this customer`)
-  } finally {
-    acting.value = null
   }
 }
 
@@ -87,68 +72,6 @@ const handleSelect = (t: any) => {
           <UserCheck v-else class="h-3.5 w-3.5" />
           {{ calling ? 'Calling…' : 'Call Next' }}
         </button>
-      </div>
-    </div>
-
-    <div
-      v-if="activeTicket"
-      class="rounded-2xl border border-primary-border bg-primary-lighter px-4 py-3.5"
-    >
-      <div class="flex flex-wrap items-center justify-between gap-3">
-        <div class="flex min-w-0 items-center gap-3">
-          <span class="grid h-9 w-9 flex-shrink-0 place-items-center rounded-xl bg-muted text-muted-foreground">
-            <UserCheck class="h-4 w-4" />
-          </span>
-          <div class="min-w-0">
-            <p class="text-[11px] font-bold uppercase tracking-wider text-primary">At your counter</p>
-            <p class="truncate text-sm font-extrabold text-foreground sm:text-base">
-              {{ activeTicket.ticketNumber }} &middot; {{ activeTicket.customerName }}
-            </p>
-          </div>
-        </div>
-        <div class="flex flex-wrap items-center gap-2">
-          <StatusPill :status="activeTicket.status" />
-          <button
-            v-if="['CALLED', 'IN_SERVICE'].includes(activeTicket.status)"
-            :disabled="acting !== null"
-            class="btn btn-sm btn-outline"
-            @click="handleAction(activeTicket, 'recall')"
-          >
-            <Loader2 v-if="acting?.id === activeTicket.id && acting?.action === 'recall'" class="h-3.5 w-3.5 animate-spin" />
-            <Bell v-else class="h-3.5 w-3.5" />
-            Recall
-          </button>
-          <button
-            v-if="activeTicket.status === 'IN_SERVICE'"
-            :disabled="acting !== null"
-            class="btn btn-sm btn-primary"
-            @click="handleAction(activeTicket, 'complete')"
-          >
-            <Loader2 v-if="acting?.id === activeTicket.id && acting?.action === 'complete'" class="h-3.5 w-3.5 animate-spin" />
-            <Check v-else class="h-3.5 w-3.5" />
-            Complete
-          </button>
-          <button
-            v-if="activeTicket.status === 'CALLED'"
-            :disabled="acting !== null"
-            class="btn btn-sm btn-ghost-danger"
-            @click="handleAction(activeTicket, 'no-show')"
-          >
-            <Loader2 v-if="acting?.id === activeTicket.id && acting?.action === 'no-show'" class="h-3.5 w-3.5 animate-spin" />
-            <XCircle v-else class="h-3.5 w-3.5" />
-            No Show
-          </button>
-          <button
-            v-if="activeTicket.status === 'CALLED'"
-            :disabled="acting !== null"
-            class="btn btn-sm btn-outline"
-            @click="handleAction(activeTicket, 'skip')"
-          >
-            <Loader2 v-if="acting?.id === activeTicket.id && acting?.action === 'skip'" class="h-3.5 w-3.5 animate-spin" />
-            <SkipForward v-else class="h-3.5 w-3.5" />
-            Skip
-          </button>
-        </div>
       </div>
     </div>
 
@@ -196,7 +119,7 @@ const handleSelect = (t: any) => {
               </td>
             </tr>
             <tr
-              v-for="t in rows"
+              v-for="t in paginated"
               :key="t.id"
               class="cursor-pointer"
               @click="handleSelect(t)"
@@ -219,6 +142,44 @@ const handleSelect = (t: any) => {
             </tr>
           </tbody>
         </table>
+      </div>
+      <div
+        v-if="totalPages > 1"
+        class="flex flex-wrap items-center justify-between gap-3 border-t border-border px-5 py-3.5"
+      >
+        <p class="text-xs text-muted-foreground">
+          Showing {{ (page - 1) * PER + 1 }}–{{ Math.min(page * PER, rows.length) }} of {{ rows.length }}
+        </p>
+        <div class="flex items-center gap-1">
+          <button
+            class="btn btn-outline btn-sm !px-2"
+            aria-label="Previous page"
+            :disabled="page === 1"
+            @click="page = Math.max(1, page - 1)"
+          >
+            <ChevronLeft class="h-4 w-4" />
+          </button>
+          <button
+            v-for="p in totalPages"
+            :key="p"
+            @click="page = p"
+            :aria-current="page === p ? 'page' : undefined"
+            :class="[
+              'grid h-8 w-8 place-items-center text-xs font-bold transition-colors',
+              page === p ? 'text-foreground' : 'text-muted-foreground hover:bg-muted',
+            ]"
+          >
+            {{ p }}
+          </button>
+          <button
+            class="btn btn-outline btn-sm !px-2"
+            aria-label="Next page"
+            :disabled="page === totalPages"
+            @click="page = Math.min(totalPages, page + 1)"
+          >
+            <ChevronRight class="h-4 w-4" />
+          </button>
+        </div>
       </div>
     </div>
   </div>

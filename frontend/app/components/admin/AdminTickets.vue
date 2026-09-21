@@ -35,6 +35,7 @@ const tickets = ref<AdminTicket[]>([])
 const totalCount = ref(0)
 const totalPages = ref(1)
 const page = ref(1)
+const PER = 10
 const statusFilter = ref('')
 const search = ref('')
 const loading = ref(true)
@@ -56,12 +57,12 @@ const isPriorityTicket = (t: AdminTicket) => Boolean(t.priority) || /^VIP-/i.tes
 const load = async (silent = false) => {
   if (!silent) loading.value = true
   try {
-    const query: Record<string, any> = { page: page.value, limit: 50 }
+    const query: Record<string, any> = { page: page.value, limit: PER }
     if (statusFilter.value) query.status = statusFilter.value
     if (trim(search.value)) query.search = trim(search.value)
     const res = await apiGet<{ tickets: AdminTicket[]; pagination: { totalCount: number; page: number; limit: number; totalPages: number } }>('/admin/tickets', query)
     tickets.value = res.tickets || []
-    const pagination = res.pagination || { totalCount: tickets.value.length, page: page.value, limit: 50, totalPages: 1 }
+    const pagination = res.pagination || { totalCount: tickets.value.length, page: page.value, limit: PER, totalPages: 1 }
     totalCount.value = pagination.totalCount
     totalPages.value = pagination.totalPages
     page.value = pagination.page
@@ -399,7 +400,7 @@ onMounted(() => {
       <!-- Pagination -->
       <div v-if="totalCount > 0" class="flex flex-wrap items-center justify-center gap-3 border-t border-border px-5 py-3">
         <span class="text-xs font-semibold text-muted-foreground tabular-nums">
-          {{ (page - 1) * 50 + 1 }}-{{ Math.min(page * 50, totalCount) }} of {{ totalCount }}
+          {{ (page - 1) * PER + 1 }}-{{ Math.min(page * PER, totalCount) }} of {{ totalCount }}
         </span>
         <div class="flex items-center gap-1">
           <button
