@@ -1,0 +1,289 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --font-sans: 'Plus Jakarta Sans', ui-sans-serif, system-ui, sans-serif;
+
+  /* Brand (grayscale) */
+  --color-primary: #1f2937;
+  --color-primary-hover: #111827;
+  --color-primary-active: #030712;
+  --color-primary-light: #f3f4f6;
+  --color-primary-lighter: #f9fafb;
+  --color-primary-border: #e5e7eb;
+  --color-primary-dark-text: #111827;
+
+  /* Surfaces & text */
+  --color-foreground: #111827;
+  --color-muted-foreground: #6b7280;
+  --color-muted: #f3f4f6;
+  --color-border: #e5e7eb;
+  --color-card: #ffffff;
+  --color-sidebar: #0f172a;
+  --color-input-bg: #f9fafb;
+  --color-bg-page: #ffffff;
+  --color-bg-customer: #f9fafb;
+  --color-bg-called: #1f2937;
+  --color-bg-ticket: #f9fafb;
+
+  /* Semantic */
+  --color-danger: #dc2626;
+  --color-danger-hover: #b91c1c;
+  --color-danger-active: #991b1b;
+  --color-danger-light: #fef2f2;
+  --color-danger-border: #fecaca;
+  --color-danger-light-border: #fee2e2;
+  --color-success: #16a34a;
+  --color-success-light: #dcfce7;
+  --color-success-check: #22c55e;
+  --color-warning: #d97706;
+  --color-warning-light: #fef3c7;
+
+  /* Elevation */
+  --shadow-card: 0 1px 2px 0 rgb(17 24 39 / 0.04), 0 1px 3px 0 rgb(17 24 39 / 0.06);
+  --shadow-card-hover: 0 14px 30px -12px rgb(17 24 39 / 0.22), 0 5px 12px -6px rgb(17 24 39 / 0.08);
+  --shadow-pop: 0 18px 44px -14px rgb(17 24 39 / 0.26), 0 7px 18px -7px rgb(17 24 39 / 0.12);
+  --shadow-glow: 0 10px 26px -10px rgb(17 24 39 / 0.5);
+  --shadow-hero: 0 18px 40px -16px rgb(17 24 39 / 0.5);
+
+  /* Brand gradients */
+  --gradient-brand: linear-gradient(135deg, #374151 0%, #111827 60%, #030712 100%);
+  --gradient-brand-soft: linear-gradient(135deg, #f9fafb 0%, #f3f4f6 50%, #e5e7eb 100%);
+}
+
+:root {
+  color-scheme: light;
+}
+
+.dark {
+  color-scheme: dark;
+
+  --color-primary: #1f2937;
+  --color-primary-hover: #374151;
+  --color-primary-active: #4b5563;
+  --color-primary-light: rgb(156 163 175 / 0.16);
+  --color-primary-lighter: rgb(156 163 175 / 0.09);
+  --color-primary-border: rgb(156 163 175 / 0.35);
+  --color-primary-dark-text: #d1d5db;
+
+  --color-foreground: #e5e7eb;
+  --color-muted-foreground: #a1a1aa;
+  --color-muted: #1f2937;
+  --color-border: #27272a;
+  --color-card: #18181b;
+  --color-sidebar: #111827;
+  --color-input-bg: #27272a;
+  --color-bg-page: #09090b;
+  --color-bg-customer: #09090b;
+  --color-bg-called: #1f2937;
+  --color-bg-ticket: #18181b;
+
+  --color-danger: #f87171;
+  --color-danger-hover: #ef4444;
+  --color-danger-active: #dc2626;
+  --color-danger-light: rgb(248 113 113 / 0.12);
+  --color-danger-border: rgb(248 113 113 / 0.35);
+  --color-danger-light-border: rgb(248 113 113 / 0.25);
+  --color-success: #4ade80;
+  --color-success-light: rgb(74 222 128 / 0.14);
+  --color-success-check: #4ade80;
+  --color-warning: #fbbf24;
+  --color-warning-light: rgb(251 191 36 / 0.14);
+
+  --shadow-card: 0 1px 2px 0 rgb(0 0 0 / 0.4), 0 1px 3px 0 rgb(0 0 0 / 0.5);
+  --shadow-card-hover: 0 18px 34px -14px rgb(0 0 0 / 0.65), 0 6px 16px -6px rgb(0 0 0 / 0.5);
+  --shadow-pop: 0 22px 52px -18px rgb(0 0 0 / 0.75), 0 9px 22px -8px rgb(0 0 0 / 0.6);
+  --shadow-glow: 0 10px 26px -10px rgb(17 24 39 / 0.7);
+  --shadow-hero: 0 18px 44px -16px rgb(0 0 0 / 0.55);
+
+  --gradient-brand: linear-gradient(135deg, #4b5563 0%, #1f2937 60%, #111827 100%);
+  --gradient-brand-soft: linear-gradient(135deg, #27272a 0%, #18181b 50%, #111827 100%);
+}
+
+* {
+  font-family: var(--font-sans);
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  color: var(--color-foreground);
+  background: var(--color-bg-page);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  transition: background-color 0.25s ease, color 0.25s ease;
+}
+
+::selection {
+  background: var(--color-primary);
+  color: #ffffff;
+}
+
+/* Themed, unobtrusive scrollbars */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border) transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: 9999px;
+  border: 3px solid transparent;
+  background-clip: content-box;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: var(--color-muted-foreground);
+  background-clip: content-box;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Reusable component classes — keep the dashboard consistent */
+@layer components {
+  .btn {
+    @apply inline-flex cursor-pointer items-center justify-center gap-2 rounded-md font-semibold transition-all duration-150 select-none focus:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 focus-visible:ring-offset-bg-page disabled:cursor-not-allowed disabled:opacity-40;
+  }
+  .btn-sm {
+    @apply px-4 py-2.5 text-sm;
+  }
+  .btn-xs {
+    @apply px-2.5 py-1.5 text-xs;
+  }
+  .btn-md {
+    @apply px-5 py-3 text-sm;
+  }
+  .btn-lg {
+    @apply px-6 py-3.5 text-[15px];
+  }
+  .btn-primary {
+    @apply bg-primary text-white shadow-sm hover:bg-primary-hover active:bg-primary-active;
+  }
+  .btn-outline {
+    @apply border border-border bg-transparent text-foreground hover:bg-muted active:bg-border;
+  }
+  .btn-soft {
+    @apply bg-primary-light text-primary-dark-text hover:bg-primary-border;
+  }
+  .btn-ghost-danger {
+    @apply border border-danger-border bg-transparent text-danger hover:bg-danger-light;
+  }
+  .btn-white {
+    @apply bg-white text-primary hover:bg-primary-light active:bg-primary-lighter shadow-sm;
+  }
+
+  .card {
+    @apply rounded-lg border border-border bg-card shadow-card;
+  }
+  .card-hover {
+    @apply transition-all duration-300 hover:-translate-y-0.5 hover:border-primary-border/70 hover:shadow-card-hover;
+  }
+
+  .input {
+    @apply w-full rounded-md border border-border bg-input-bg px-3 py-2.5 text-sm text-foreground transition-all placeholder:text-muted-foreground focus:border-transparent focus:outline-none focus:ring-2 focus:ring-primary;
+  }
+  .label {
+    @apply mb-1.5 block text-sm font-semibold text-foreground;
+  }
+  .th {
+    @apply whitespace-nowrap px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground;
+  }
+  .td {
+    @apply px-5 py-3.5 text-sm;
+  }
+
+  .gradient-brand {
+    background-image: var(--gradient-brand);
+  }
+  .gradient-brand-soft {
+    background-image: var(--gradient-brand-soft);
+  }
+}
+
+/* Gmail-style hovered rows: a full-width, seamless dark shadow dropping beneath the row */
+.table-gmail {
+  border-collapse: separate;
+  border-spacing: 0;
+}
+.table-gmail tbody tr {
+  transition: background-color 0.15s ease;
+}
+.table-gmail tbody tr:hover {
+  position: relative;
+  z-index: 2;
+  background-color: var(--color-card);
+  box-shadow:
+    0 1px 3px -1px rgb(17 24 39 / 0.16),
+    0 10px 22px -10px rgb(17 24 39 / 0.22);
+}
+.table-gmail tbody tr:hover td {
+  position: relative;
+  z-index: 1;
+  background-color: var(--color-card);
+}
+.table-gmail tbody tr:hover th {
+  background-color: var(--color-card);
+}
+
+/* Hover shadow for list rows (non-table layouts) */
+.row-hover {
+  transition: box-shadow 0.15s ease, background-color 0.15s ease;
+}
+.row-hover:hover {
+  position: relative;
+  z-index: 1;
+  box-shadow:
+    0 1px 2px -1px rgb(17 24 39 / 0.08),
+    0 10px 18px -10px rgb(17 24 39 / 0.28);
+}
+
+/* Dashboard page transition */
+.pagefade-enter-active {
+  transition: opacity 0.22s ease, transform 0.22s ease;
+}
+.pagefade-leave-active {
+  transition: opacity 0.12s ease;
+}
+.pagefade-enter-from {
+  opacity: 0;
+  transform: translateY(8px);
+}
+.pagefade-leave-to {
+  opacity: 0;
+}
+
+/* Subtle grid texture for hero panels */
+.bg-grid {
+  background-image:
+    linear-gradient(to right, rgb(255 255 255 / 0.08) 1px, transparent 1px),
+    linear-gradient(to bottom, rgb(255 255 255 / 0.08) 1px, transparent 1px);
+  background-size: 32px 32px;
+}
+
+.bg-grid-dark {
+  background-image:
+    linear-gradient(to right, rgb(255 255 255 / 0.05) 1px, transparent 1px),
+    linear-gradient(to bottom, rgb(255 255 255 / 0.05) 1px, transparent 1px);
+  background-size: 32px 32px;
+}
