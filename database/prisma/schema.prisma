@@ -1,0 +1,112 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/prisma"
+  binaryTargets = ["native", "rhel-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum UserRole {
+  ADMIN
+  COUNTER_STAFF
+}
+
+enum TicketStatus {
+  WAITING
+  CALLED
+  IN_SERVICE
+  SERVED
+  SKIPPED
+  CANCELLED
+  AUTO_CANCELLED
+}
+
+enum NotificationChannel {
+  WHATSAPP
+  SMS
+  NONE
+}
+
+enum NotificationTrigger {
+  INITIAL_JOIN
+  THRESHOLD_ALERT
+  COUNTER_CALL
+  AUTO_CANCELLED
+}
+
+model User {
+  id           String   @id @default(uuid())
+  employeeId   String   @unique
+  fullName     String
+  passwordHash String
+  role         UserRole @default(COUNTER_STAFF)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  activeCounter   Counter? @relation("CounterStaffBinding")
+  servicedTickets Ticket[]  @relation("StaffServicedTickets")
+
+  @@map("users")
+}
+
+model Counter {
+  id             String   @id @default(uuid())
+  counterNumber  Int      @unique
+  counterName    String
+  isActive       Boolean  @default(true)
+  updatedAt      DateTime @updatedAt
+
+  currentStaffId String?  @unique
+  currentStaff   User?    @relation("CounterStaffBinding", fields: [currentStaffId], references: [id], onDelete: SetNull)
+
+  tickets Ticket[]
+
+  @@map("counters")
+}
+
+model Ticket {
+  id                       String              @id @default(uuid())
+  ticketNumber             String
+  customerName             String
+  phoneNumber              String
+  preferredChannel         NotificationChannel @default(WHATSAPP)
+  status                   TicketStatus        @default(WAITING)
+  initialPosition          Int
+  currentPosition          Int
+  estimatedWaitTimeMinutes Int                 @default(0)
+  skipCount                Int                 @default(0)
+
+  joinedAt    DateTime  @default(now())
+  calledAt    DateTime?
+  servicedAt  DateTime?
+  completedAt DateTime?
+  skippedAt   DateTime?
+  cancelledAt DateTime?
+
+  counterId String?
+  counter   Counter? @relation(fields: [counterId], references: [id], onDelete: SetNull)
+
+  servicedByStaffId String?
+  servicedByStaff   User?   @relation("StaffServicedTickets", fields: [servicedByStaffId], references: [id], onDelete: SetNull)
+
+  notificationLogs NotificationLog[]
+
+  @@index([status, joinedAt])
+  @@map("tickets")
+}
+
+model NotificationLog {
+  id       String              @id @default(uuid())
+  ticketId String
+  ticket   Ticket              @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  channel  NotificationChannel
+  trigger  NotificationTrigger
+  message  String
+  sentAt   DateTime            @default(now())
+
+  @@map("notification_logs")
+}
