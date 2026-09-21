@@ -49,7 +49,7 @@ const priorityForm = ref({ customerName: '', phoneNumber: '', preferredChannel: 
 const priorityErrors = ref({ customerName: '', phoneNumber: '' })
 const priorityTouched = ref<Record<string, boolean>>({})
 
-let timer: ReturnType<typeof setInterval> | null = null
+
 let searchTimer: ReturnType<typeof setTimeout> | null = null
 
 const isPriorityTicket = (t: AdminTicket) => Boolean(t.priority) || /^VIP-/i.test(t.ticketNumber)
@@ -161,13 +161,11 @@ const lockScroll = (locked: boolean) => {
 watch(showPriorityModal, (open) => lockScroll(open))
 onUnmounted(() => {
   lockScroll(false)
-  if (timer) clearInterval(timer)
   if (searchTimer) clearTimeout(searchTimer)
 })
 
 onMounted(() => {
   load()
-  timer = setInterval(() => load(true), 10000)
 })
 </script>
 
@@ -181,7 +179,7 @@ onMounted(() => {
       <div class="flex items-center gap-2">
         <button
           class="inline-flex cursor-pointer items-center gap-2 rounded-full border border-border bg-bg-page px-3 py-1.5 text-xs font-semibold text-muted-foreground transition-colors hover:text-foreground focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-          title="Updates automatically every 10 seconds - click to refresh now"
+          title="Click to refresh now"
           @click="refreshing = true, load(true)"
         >
           <span class="relative flex h-2 w-2">
@@ -193,7 +191,7 @@ onMounted(() => {
               :class="['relative inline-flex h-2 w-2 rounded-full', refreshing ? 'bg-muted-foreground' : 'bg-success']"
             />
           </span>
-          {{ refreshing ? 'Refreshing…' : 'Live' }}
+          {{ refreshing ? 'Refreshing…' : 'Refresh' }}
         </button>
         <button class="btn btn-sm btn-primary" @click="openPriorityModal">
           <Plus class="h-4 w-4" />

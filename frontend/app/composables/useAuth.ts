@@ -1,11 +1,4 @@
-import {
-  apiPost,
-  clearStoredAuth,
-  getStoredUser,
-  getToken,
-  setStoredUser,
-  setToken,
-} from '~/utils/api'
+import { apiPost, TOKEN_COOKIE, USER_COOKIE } from '~/utils/api'
 
 export interface AuthCounter {
   id: string
@@ -28,32 +21,25 @@ export interface LoginResponse {
   user: AuthUser
 }
 
+const COOKIE_OPTS = { path: '/', sameSite: 'lax' as const, maxAge: 60 * 60 * 12 }
+
 export function useAuth() {
-  const token = useState<string | null>('qflow-auth-token', () => null)
-  const user = useState<AuthUser | null>('qflow-auth-user', () => null)
+  const token = useCookie<string | null>(`${TOKEN_COOKIE}`, { ...COOKIE_OPTS, default: () => null })
+  const user = useCookie<AuthUser | null>(`${USER_COOKIE}`, { ...COOKIE_OPTS, default: () => null })
 
   const isAuthenticated = computed(() => !!token.value)
   const isAdmin = computed(() => user.value?.role === 'ADMIN')
   const isStaff = computed(() => user.value?.role === 'COUNTER_STAFF')
 
-  const hydrate = () => {
-    if (import.meta.server) return
-    token.value = getToken()
-    user.value = getStoredUser<AuthUser>()
-  }
-
   const login = async (employeeId: string, password: string): Promise<LoginResponse> => {
     const res = await apiPost<LoginResponse>('/auth/login', { employeeId, password })
     token.value = res.token
     user.value = res.user
-    setToken(res.token)
-    setStoredUser(res.user)
     return res
   }
 
   const setUser = (next: AuthUser | null) => {
     user.value = next
-    if (next) setStoredUser(next)
   }
 
   const logout = async (options: { unbind?: boolean } = {}) => {
@@ -66,7 +52,6 @@ export function useAuth() {
     }
     token.value = null
     user.value = null
-    clearStoredAuth()
   }
 
   return {
@@ -75,7 +60,6 @@ export function useAuth() {
     isAuthenticated,
     isAdmin,
     isStaff,
-    hydrate,
     login,
     setUser,
     logout,

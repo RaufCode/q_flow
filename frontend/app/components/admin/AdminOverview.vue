@@ -69,8 +69,6 @@ const recent = ref<OverviewTicket[]>([])
 const loading = ref(true)
 const errorMsg = ref('')
 
-let timer: ReturnType<typeof setInterval> | null = null
-
 const load = async (silent = false) => {
   if (!silent) loading.value = true
   try {
@@ -111,11 +109,6 @@ const load = async (silent = false) => {
 
 onMounted(() => {
   load()
-  timer = setInterval(() => load(true), 10000)
-})
-
-onUnmounted(() => {
-  if (timer) clearInterval(timer)
 })
 
 const activityMark = (status: string) =>

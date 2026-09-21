@@ -3,9 +3,13 @@ export interface ApiError {
   message: string
 }
 
-const TOKEN_KEY = 'qflow_token'
-const USER_KEY = 'qflow_user'
+export const TOKEN_COOKIE = 'qflow_token'
+export const USER_COOKIE = 'qflow_user'
 const FALLBACK_BASE = '/api/v1'
+
+function cookieOpts() {
+  return { path: '/', sameSite: 'lax' as const, maxAge: 60 * 60 * 12 }
+}
 
 export function resolveApiBase(): string {
   try {
@@ -17,38 +21,46 @@ export function resolveApiBase(): string {
 }
 
 export function getToken(): string | null {
-  if (import.meta.server) return null
   try {
-    return localStorage.getItem(TOKEN_KEY)
+    return useCookie<string | null>(TOKEN_COOKIE, { ...cookieOpts(), default: () => null }).value ?? null
   } catch {
     return null
   }
 }
 
 export function setToken(token: string) {
-  if (import.meta.server) return
-  localStorage.setItem(TOKEN_KEY, token)
+  try {
+    useCookie<string | null>(TOKEN_COOKIE, cookieOpts()).value = token
+  } catch {
+    // Ignore — cookie persistence unavailable.
+  }
 }
 
 export function getStoredUser<T = any>(): T | null {
-  if (import.meta.server) return null
   try {
-    const raw = localStorage.getItem(USER_KEY)
-    return raw ? (JSON.parse(raw) as T) : null
+    return useCookie<T | null>(USER_COOKIE, { ...cookieOpts(), default: () => null }).value ?? null
   } catch {
     return null
   }
 }
 
 export function setStoredUser(user: unknown) {
-  if (import.meta.server) return
-  localStorage.setItem(USER_KEY, JSON.stringify(user))
+  try {
+    useCookie<unknown | null>(USER_COOKIE, cookieOpts()).value = user ?? null
+  } catch {
+    // Ignore — cookie persistence unavailable.
+  }
 }
 
 export function clearStoredAuth() {
-  if (import.meta.server) return
-  localStorage.removeItem(TOKEN_KEY)
-  localStorage.removeItem(USER_KEY)
+  try {
+    const token = useCookie<string | null>(TOKEN_COOKIE, cookieOpts())
+    const user = useCookie<unknown | null>(USER_COOKIE, cookieOpts())
+    token.value = null
+    user.value = null
+  } catch {
+    // Ignore — cookies unavailable.
+  }
 }
 
 /**
@@ -96,14 +108,6 @@ function isSessionError(status: number, message: string): boolean {
 function clearSessionAuth() {
   if (import.meta.server) return
   clearStoredAuth()
-  try {
-    const token = useState('qflow-auth-token')
-    const user = useState('qflow-auth-user')
-    if (token && typeof token.value === 'string') token.value = null
-    if (user && user.value) user.value = null
-  } catch {
-    // Nuxt state unavailable — storage was already cleared.
-  }
   if (
     typeof window !== 'undefined' &&
     window.location.pathname !== '/' &&
