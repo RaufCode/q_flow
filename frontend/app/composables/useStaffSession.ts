@@ -35,6 +35,11 @@ export interface ShiftOverview {
   waiting: StaffTicket[]
 }
 
+export interface TicketListResult {
+  tickets: StaffTicket[]
+  pagination: { totalCount: number; page: number; limit: number; totalPages: number }
+}
+
 export function useStaffSession() {
   const { user } = useAuth()
   const overview = useState<ShiftOverview | null>('staff-overview', () => null)
@@ -129,11 +134,29 @@ export function useStaffSession() {
 
   const skipTicket = async (id: string) => {
     const res = await apiPost<{ message: string; ticket: StaffTicket }>(
-      `/staff/tickets/${id}/skip`,
+      `/counters/tickets/${id}/skip`,
     )
     trackTicket(res?.ticket)
     await refresh(true)
     return res?.ticket
+  }
+
+  /**
+   * Server-side ticket list with the same filters as the admin tickets page.
+   * Pass the query params straight through — the backend does the work.
+   */
+  const fetchTickets = async (options: {
+    status?: string
+    search?: string
+    page?: number
+    limit?: number
+  } = {}): Promise<TicketListResult> => {
+    return apiGet<TicketListResult>('/staff/tickets', {
+      status: options.status || '',
+      search: options.search || '',
+      page: options.page || 1,
+      limit: options.limit || 10,
+    })
   }
 
   const reset = () => {
@@ -157,6 +180,7 @@ export function useStaffSession() {
     completeService,
     noShowTicket,
     skipTicket,
+    fetchTickets,
     reset,
   }
 }
