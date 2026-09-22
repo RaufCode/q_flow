@@ -62,8 +62,16 @@ Use the login pages to sign in, then try each dashboard below.
 ### Staff dashboard tabs (left menu)
 
 - **Overview** – your numbers and the next ticket to call.
-- **Queue** – the waiting list; open a ticket to call, start or finish it.
-- **History** – tickets you have already handled.
+- **Queue** – the waiting list sorted by position (oldest first). Use the **All / Waiting / Called** pills and the search box to narrow it down. The **Call Next** button shows the name of the customer whose turn it is, and quick **Serve**, **Skip** and **Recall** actions sit beside the ticket currently being served.
+- **History** – tickets already finished (skipped, served, cancelled, auto-cancelled). Filter by status with the dropdown and search by name, ticket number or phone.
+
+### Choosing a counter (staff)
+
+After signing in without an active shift, staff land on the **Select Your Counter** page:
+
+- A list of **available counters & tellers** is shown (with online/offline status). Clicking one fills the **Counter ID** automatically.
+- If a counter doesn't appear (e.g. it's being used by someone else, or its ID wasn't synced), type the **Counter ID** provided by the branch administrator into the box and press **Start Shift**.
+- Once bound, you can copy the Counter ID, go to the dashboard, or end the shift.
 
 ---
 
@@ -84,9 +92,10 @@ Good places to try to "break" the app:
 - Generate a QR code and download the image.
 
 **Staff dashboard**
-- Pick a counter first; if you don't, the app redirects you to `/staff/counter`.
-- Call the next ticket, start service, complete it, skip one.
-- Check the History tab shows the tickets you handled.
+- Sign in, then pick a counter on the Counter page (or sign in with an active shift to land straight on the dashboard).
+- Call the next ticket (the button shows who is next), serve, skip or recall.
+- Use the Queue pills and search, then check the Queue shows *Position* first, oldest first.
+- Check the History tab shows the tickets you finished and that the status dropdown filters them correctly.
 
 **Customer ticket form** (`/ticket-registration`)
 - Submit empty, or invalid phone numbers (e.g. `123`), and confirm the error messages.
