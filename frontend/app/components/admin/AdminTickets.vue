@@ -281,7 +281,7 @@ onMounted(() => {
     <div class="flex flex-wrap items-center gap-2">
       <div class="flex flex-wrap items-center justify-center gap-1">
         <button
-          v-for="opt in [{ value: '', label: 'All' }, { value: 'WAITING', label: 'Waiting' }, { value: 'CALLED', label: 'Called' }, { value: 'IN_SERVICE', label: 'In Service' }, { value: 'SERVED', label: 'Served' }, { value: 'SKIPPED', label: 'Skipped' }, { value: 'CANCELLED', label: 'Cancelled' }]"
+          v-for="opt in [{ value: '', label: 'All' }, { value: 'WAITING', label: 'Waiting' }, { value: 'CALLED', label: 'Called' }, { value: 'IN_SERVICE', label: 'In Service' }, { value: 'SERVED', label: 'Served' }, { value: 'SKIPPED', label: 'Skipped' }, { value: 'CANCELLED', label: 'Cancelled' }, { value: 'AUTO_CANCELLED', label: 'Auto Cancelled' }]"
           :key="opt.value"
           class="inline-flex cursor-pointer items-center rounded-full px-3 py-1.5 text-xs font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
           :class="statusFilter === opt.value ? 'bg-gray-900 text-white dark:bg-gray-100 dark:text-gray-900' : 'bg-muted text-muted-foreground hover:bg-border'"
