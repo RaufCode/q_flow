@@ -39,6 +39,9 @@ router.use(authenticateToken, requireCounterStaff);
  *                   items:
  *                     type: object
  *                     properties:
+ *                       id:
+ *                         type: string
+ *                         example: 43c0e590-f0f0-4aad-a850-68d4f5610852
  *                       employeeId:
  *                         type: string
  *                         example: EMP-2201
@@ -51,6 +54,9 @@ router.use(authenticateToken, requireCounterStaff);
  *                       activeCounter:
  *                         type: string
  *                         nullable: true
+ *                         example: Teller 1
+ *                       counterName:
+ *                         type: string
  *                         example: Teller 1
  *                       counterNumber:
  *                         type: integer
