@@ -18,21 +18,22 @@ async function resolveStaffAndCounterByEmployeeId(employeeId: string) {
   return { staff, counter };
 }
 
-//--------- List all counters currently staffed (for the dashboard's desk selector) ----------
+//--------- List all counters for the dashboard's desk selector ----------
 export async function listCounters() {
   const counters = await prisma.counter.findMany({
     include: { currentStaff: false },
     orderBy: { counterNumber: 'asc' },
   });
 
-  // Shaped to match the frontend's Counter interface. Counters with no staff
-  // bound are excluded, since there's no employeeId to key the selector on.
-  return counters
-    .map((c) => ({
-      activeCounter: c.counterName,
-      counterNumber: c.counterNumber,
-      isOnline: c.isActive,
-    }));
+  // The id is exposed so staff can select a counter and bind their shift
+  // directly (no manual Counter ID entry required).
+  return counters.map((c) => ({
+    id: c.id,
+    activeCounter: c.counterName,
+    counterName: c.counterName,
+    counterNumber: c.counterNumber,
+    isOnline: c.isActive,
+  }));
 }
 
 //--------- Current CALLED/IN_SERVICE ticket at a given counter ----------
