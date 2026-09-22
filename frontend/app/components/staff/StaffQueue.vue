@@ -1,48 +1,162 @@
 <script setup lang="ts">
-import { Loader2, UserCheck, Search, ChevronLeft, ChevronRight } from 'lucide-vue-next'
-import { formatTime, channelLabel } from '~/utils/format'
+import {
+  Loader2,
+  UserCheck,
+  Search,
+  ChevronLeft,
+  ChevronRight,
+  Bell,
+  CheckCircle2,
+  SkipForward,
+} from 'lucide-vue-next'
+import { formatTime, channelLabel, statusLabel } from '~/utils/format'
 
 const emit = defineEmits<{ selectTicket: [id: string] }>()
 
-const { overview, loading, callNext, completeService, trackTicket, error } = useStaffSession()
+const {
+  overview,
+  fetchTickets,
+  callNext,
+  completeService,
+  skipTicket,
+  recallTicket,
+  trackTicket,
+  error,
+} = useStaffSession()
 const showToast = inject<(msg: string) => void>('showToast', () => {})
 const search = ref('')
 const filter = ref('')
-const calling = ref(false)
-const PER = 10
 const page = ref(1)
+const PER = 10
+const tickets = ref<any[]>([])
+const loading = ref(false)
+const acting = ref<string | null>(null)
+let searchTimer: ReturnType<typeof setTimeout> | null = null
+
+const QUEUE_STATUSES = ['WAITING', 'CALLED']
+const STATUS_PILLS = [
+  { value: '', label: 'All' },
+  { value: 'WAITING', label: 'Waiting' },
+  { value: 'CALLED', label: 'Called' },
+]
 
 const activeTicket = computed(() => overview.value?.activeTicket ?? null)
 const waitingCount = computed(() => overview.value?.waiting?.length ?? 0)
 
-const rows = computed(() => {
-  const list = [...(overview.value?.waiting ?? [])]
-  const s = search.value.toLowerCase()
-  return list.filter((t) => {
-    const matchesSearch =
-      !s || t.customerName.toLowerCase().includes(s) || t.ticketNumber.toLowerCase().includes(s)
-    const matchesFilter = !filter.value || t.status === filter.value
-    return matchesSearch && matchesFilter
-  })
+const nextUp = computed(() => {
+  const waiting = [...(overview.value?.waiting ?? [])]
+    .filter((t) => t.status === 'WAITING')
+    .sort((a, b) => (a.currentPosition || 0) - (b.currentPosition || 0))
+  return waiting[0] ?? null
 })
+
+const rows = computed(() =>
+  [...tickets.value]
+    .filter((t) => QUEUE_STATUSES.includes(t.status))
+    .sort((a, b) => (a.currentPosition || 9999) - (b.currentPosition || 9999)),
+)
 
 const totalPages = computed(() => Math.max(1, Math.ceil(rows.value.length / PER)))
 const paginated = computed(() => rows.value.slice((page.value - 1) * PER, page.value * PER))
 
-watch([search, filter], () => (page.value = 1))
+const loadQueue = async (silent = false) => {
+  if (!silent) loading.value = true
+  try {
+    const statuses = filter.value ? [filter.value] : QUEUE_STATUSES
+    const results = await Promise.all(
+      statuses.map((status) =>
+        fetchTickets({
+          status,
+          search: search.value.trim(),
+          page: 1,
+          limit: 100,
+        }),
+      ),
+    )
+    const seen = new Set<string>()
+    tickets.value = results
+      .flatMap((res) => res.tickets ?? [])
+      .filter((t) => {
+        if (seen.has(t.id)) return false
+        seen.add(t.id)
+        return true
+      })
+    page.value = 1
+  } catch (err: any) {
+    showToast(err?.message || 'Failed to load queue')
+  } finally {
+    loading.value = false
+  }
+}
+
+watch([search, filter], () => {
+  if (searchTimer) clearTimeout(searchTimer)
+  searchTimer = setTimeout(() => loadQueue(), 300)
+})
+
+onMounted(() => loadQueue())
+onUnmounted(() => {
+  if (searchTimer) clearTimeout(searchTimer)
+})
+
+const afterAction = async (message: string) => {
+  showToast(message)
+  await Promise.all([loadQueue(true)])
+}
 
 const handleCallNext = async () => {
-  calling.value = true
+  acting.value = 'call-next'
   try {
     if (activeTicket.value?.status === 'IN_SERVICE') {
       await completeService(activeTicket.value.id)
     }
     const ticket = await callNext()
-    if (ticket) showToast(`Calling ${ticket.ticketNumber} — ${ticket.customerName}`)
+    if (ticket) {
+      await afterAction(`Calling ${ticket.ticketNumber} — ${ticket.customerName}`)
+    }
   } catch (err: any) {
     showToast(err?.message || 'Failed to call next customer')
   } finally {
-    calling.value = false
+    acting.value = null
+  }
+}
+
+const handleServe = async () => {
+  if (!activeTicket.value) return
+  acting.value = 'serve'
+  try {
+    const t = await completeService(activeTicket.value.id)
+    await afterAction(`${t.ticketNumber} — ${t.customerName} marked served`)
+  } catch (err: any) {
+    showToast(err?.message || 'Failed to mark served')
+  } finally {
+    acting.value = null
+  }
+}
+
+const handleSkip = async () => {
+  if (!activeTicket.value) return
+  acting.value = 'skip'
+  try {
+    const t = await skipTicket(activeTicket.value.id)
+    await afterAction(`${t.ticketNumber} skipped to back of queue`)
+  } catch (err: any) {
+    showToast(err?.message || 'Failed to skip ticket')
+  } finally {
+    acting.value = null
+  }
+}
+
+const handleRecall = async () => {
+  if (!activeTicket.value) return
+  acting.value = 'recall'
+  try {
+    const t = await recallTicket(activeTicket.value.id)
+    await afterAction(`${t.ticketNumber} re-notified`)
+  } catch (err: any) {
+    showToast(err?.message || 'Failed to re-notify')
+  } finally {
+    acting.value = null
   }
 }
 
@@ -62,20 +176,75 @@ const handleSelect = (t: any) => {
           {{ waitingCount === 1 ? 'customer' : 'customers' }} waiting
         </p>
       </div>
-      <div class="flex items-center gap-2">
+
+      <!-- Active ticket quick actions -->
+      <div v-if="activeTicket" class="flex flex-wrap items-center gap-2">
+        <span class="inline-flex items-center gap-1.5 rounded-full bg-muted px-3 py-1 text-xs font-semibold text-foreground">
+          <span class="h-1.5 w-1.5 rounded-full bg-primary" />
+          {{ activeTicket.ticketNumber }} · {{ activeTicket.customerName }}
+          <span class="text-muted-foreground">({{ statusLabel(activeTicket.status) }})</span>
+        </span>
         <button
-          :disabled="calling || waitingCount === 0"
+          v-if="activeTicket.status === 'IN_SERVICE'"
+          :disabled="acting !== null"
           class="btn btn-sm btn-primary"
-          @click="handleCallNext"
+          @click="handleServe"
         >
-          <Loader2 v-if="calling" class="h-3.5 w-3.5 animate-spin" />
-          <UserCheck v-else class="h-3.5 w-3.5" />
-          {{ calling ? 'Calling…' : 'Call Next' }}
+          <Loader2 v-if="acting === 'serve'" class="h-3.5 w-3.5 animate-spin" />
+          <CheckCircle2 v-else class="h-3.5 w-3.5" />
+          Serve
+        </button>
+        <button
+          v-if="activeTicket.status === 'CALLED' || activeTicket.status === 'IN_SERVICE'"
+          :disabled="acting !== null"
+          class="btn btn-sm btn-outline"
+          @click="handleRecall"
+        >
+          <Loader2 v-if="acting === 'recall'" class="h-3.5 w-3.5 animate-spin" />
+          <Bell v-else class="h-3.5 w-3.5" />
+          Recall
+        </button>
+        <button
+          v-if="activeTicket.status === 'CALLED' || activeTicket.status === 'IN_SERVICE'"
+          :disabled="acting !== null"
+          class="btn btn-sm btn-ghost-danger"
+          @click="handleSkip"
+        >
+          <Loader2 v-if="acting === 'skip'" class="h-3.5 w-3.5 animate-spin" />
+          <SkipForward v-else class="h-3.5 w-3.5" />
+          Skip
         </button>
       </div>
+
+      <!-- Call next with the upcoming customer's name -->
+      <button
+        :disabled="acting !== null || waitingCount === 0"
+        class="btn btn-primary !rounded-lg !px-4 !py-2.5 gap-2"
+        @click="handleCallNext"
+      >
+        <Loader2 v-if="acting === 'call-next'" class="h-4 w-4 animate-spin" />
+        <UserCheck v-else class="h-4 w-4" />
+        <span class="flex flex-col items-start leading-tight">
+          <span>{{ acting === 'call-next' ? 'Calling…' : 'Call Next' }}</span>
+          <span v-if="nextUp" class="text-[11px] font-semibold opacity-90">
+            {{ nextUp.customerName }} · {{ nextUp.ticketNumber }}
+          </span>
+        </span>
+      </button>
     </div>
 
     <div class="flex flex-col gap-3 sm:flex-row">
+      <div class="flex flex-wrap items-center gap-1">
+        <button
+          v-for="opt in STATUS_PILLS"
+          :key="opt.value"
+          class="inline-flex cursor-pointer items-center rounded-full px-3 py-1.5 text-xs font-semibold transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+          :class="filter === opt.value ? 'bg-gray-900 text-white dark:bg-gray-100 dark:text-gray-900' : 'bg-muted text-muted-foreground hover:bg-border'"
+          @click="filter = opt.value; page = 1"
+        >
+          {{ opt.label }}
+        </button>
+      </div>
       <div class="relative flex-1">
         <Search class="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
         <input
@@ -84,32 +253,28 @@ const handleSelect = (t: any) => {
           placeholder="Search by name or ticket number…"
         />
       </div>
-      <select v-model="filter" class="input sm:w-44">
-        <option value="">All Statuses</option>
-        <option value="WAITING">Waiting</option>
-        <option value="CALLED">Called</option>
-      </select>
     </div>
 
     <p v-if="error" class="text-xs text-danger">{{ error }}</p>
 
     <div class="card overflow-hidden">
-      <SkeletonTable v-if="loading && !overview" :rows="7" :cols="5" />
+      <SkeletonTable v-if="loading && tickets.length === 0" :rows="7" :cols="5" />
       <div v-else class="overflow-x-auto">
         <table class="table-gmail w-full text-sm">
           <thead class="bg-muted/40">
             <tr class="border-b border-border">
+              <th class="th">Position</th>
               <th class="th">Ticket</th>
               <th class="th">Customer</th>
               <th class="th hidden sm:table-cell">Channel</th>
-              <th class="th">Position</th>
+              <th class="th hidden md:table-cell">Status</th>
               <th class="th hidden md:table-cell">Joined</th>
               <th class="th text-right"></th>
             </tr>
           </thead>
           <tbody class="divide-y divide-border">
-            <tr v-if="rows.length === 0">
-              <td colspan="6" class="px-5 py-14 text-center text-muted-foreground">
+            <tr v-if="paginated.length === 0">
+              <td colspan="7" class="px-5 py-14 text-center text-muted-foreground">
                 <p class="text-sm font-semibold">
                   {{ waitingCount > 0 ? 'No tickets match your filters.' : 'No customers in queue right now.' }}
                 </p>
@@ -124,17 +289,16 @@ const handleSelect = (t: any) => {
               class="cursor-pointer"
               @click="handleSelect(t)"
             >
+              <td class="td font-extrabold text-foreground tabular-nums">
+                {{ t.currentPosition > 0 ? t.currentPosition : '0' }}
+              </td>
               <td class="td font-extrabold text-gray-900 tabular-nums">{{ t.ticketNumber }}</td>
               <td class="td">
                 <p class="truncate font-semibold text-foreground">{{ t.customerName }}</p>
                 <p class="text-xs text-muted-foreground">{{ t.phoneNumber }}</p>
               </td>
               <td class="td text-muted-foreground hidden sm:table-cell">{{ channelLabel(t.preferredChannel) }}</td>
-              <td class="td text-foreground tabular-nums">
-                <span class="text-xs font-bold text-foreground">
-                  {{ t.currentPosition > 0 ? t.currentPosition : '0' }}
-                </span>
-              </td>
+              <td class="td hidden md:table-cell"><StatusPill :status="t.status" /></td>
               <td class="td text-muted-foreground hidden md:table-cell tabular-nums">{{ formatTime(t.joinedAt) }}</td>
               <td class="td text-right">
                 <span class="text-xs font-bold text-gray-900">Details</span>
