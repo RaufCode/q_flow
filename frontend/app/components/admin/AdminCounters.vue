@@ -2,6 +2,7 @@
 import { Loader2, Unlink, Copy, Check, Plus, X, ChevronLeft, ChevronRight } from 'lucide-vue-next'
 import { apiGet, apiPost, apiPatch } from '~/utils/api'
 import { trim, isValidCounterNumber, isValidCounterName } from '~/utils/validate'
+import { setCounterRegistry } from '~/utils/counterRegistry'
 
 const showToast = inject<(msg: string) => void>('showToast', () => {})
 
@@ -64,6 +65,7 @@ const load = async () => {
   try {
     const res = await apiGet<{ counters: Counter[] }>('/admin/counters')
     counters.value = res.counters || []
+    setCounterRegistry(counters.value)
     errorMsg.value = ''
   } catch (err: any) {
     errorMsg.value = err?.message || 'Failed to load counters.'
@@ -85,6 +87,7 @@ const handleCreate = async () => {
     })
     const created = { ...res.counter, currentStaff: null, currentStaffId: null }
     counters.value = [...counters.value, created].sort((a, b) => a.counterNumber - b.counterNumber)
+    setCounterRegistry(counters.value)
     showToast('Counter created successfully')
     newNumber.value = null
     newName.value = ''
