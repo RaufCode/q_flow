@@ -144,20 +144,9 @@ export function useStaffSession() {
 
   const startService = async (id: string) => {
     const ticketId = requireResourceId(id)
-    let res: { message: string; ticket: StaffTicket }
-    try {
-      // Canonical endpoint: POST /staff/tickets/{id}/start
-      res = await apiPost<{ message: string; ticket: StaffTicket }>(
-        `/staff/tickets/${ticketId}/start`,
-      )
-    } catch (err: any) {
-      // Route isn't deployed yet — fall back to the generic status PATCH.
-      if (err?.status !== 404) throw err
-      res = await apiPatch<{ message: string; ticket: StaffTicket }>(
-        `/staff/tickets/${ticketId}/status`,
-        { status: 'IN_SERVICE' },
-      )
-    }
+    const res = await apiPost<{ message: string; ticket: StaffTicket }>(
+      `/staff/tickets/${ticketId}/start`,
+    )
     const ticket = toTicket(res)
     trackTicket(ticket)
     await refresh(true)
@@ -166,20 +155,9 @@ export function useStaffSession() {
 
   const completeService = async (id: string) => {
     const ticketId = requireResourceId(id)
-    let res: { message: string; ticket: StaffTicket }
-    try {
-      // Canonical endpoint: POST /staff/tickets/{id}/complete
-      res = await apiPost<{ message: string; ticket: StaffTicket }>(
-        `/staff/tickets/${ticketId}/complete`,
-      )
-    } catch (err: any) {
-      // Route isn't deployed yet — fall back to the generic status PATCH.
-      if (err?.status !== 404) throw err
-      res = await apiPatch<{ message: string; ticket: StaffTicket }>(
-        `/staff/tickets/${ticketId}/status`,
-        { status: 'SERVED' },
-      )
-    }
+    const res = await apiPost<{ message: string; ticket: StaffTicket }>(
+      `/staff/tickets/${ticketId}/complete`,
+    )
     const ticket = toTicket(res)
     trackTicket(ticket)
     await refresh(true)
@@ -200,22 +178,9 @@ export function useStaffSession() {
 
   const skipTicket = async (id: string) => {
     const ticketId = requireResourceId(id)
-    const postSkip = (base: string) =>
-      apiPost<{ message: string; ticket: StaffTicket }>(`${base}/${ticketId}/skip`)
-    let res: { message: string; ticket: StaffTicket }
-    try {
-      // Specified endpoint: POST /counters/tickets/{id}/skip
-      res = await postSkip('/counters/tickets')
-    } catch (err: any) {
-      if (err?.status !== 404) throw err
-      try {
-        // Documented endpoint: POST /staff/tickets/{id}/skip
-        res = await postSkip('/staff/tickets')
-      } catch (err2: any) {
-        if (err2?.status !== 404) throw err2
-        throw new Error('Skip is unavailable — the backend has not deployed this endpoint yet.')
-      }
-    }
+    const res = await apiPost<{ message: string; ticket: StaffTicket }>(
+      `/staff/tickets/${ticketId}/skip`,
+    )
     const ticket = toTicket(res)
     trackTicket(ticket)
     await refresh(true)
