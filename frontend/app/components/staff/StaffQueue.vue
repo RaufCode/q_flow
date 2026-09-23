@@ -78,7 +78,7 @@ const loadQueue = async (silent = false) => {
       })
     page.value = 1
   } catch (err: any) {
-    showToast(err?.message || 'Failed to load queue')
+    showToast(err?.message || 'Failed to load queue', 'error')
   } finally {
     loading.value = false
   }
@@ -95,7 +95,7 @@ onUnmounted(() => {
 })
 
 const afterAction = async (message: string) => {
-  showToast(message)
+  showToast(message, 'success')
   await Promise.all([loadQueue(true)])
 }
 
@@ -109,7 +109,7 @@ const handleCallNext = async () => {
       await afterAction(`Calling ${ticket.ticketNumber}${ticketLabel(ticket)}`)
     }
   } catch (err: any) {
-    showToast(err?.message || 'Failed to call next customer')
+    showToast(err?.message || 'Failed to call next customer', 'error')
   } finally {
     acting.value = null
   }
@@ -122,7 +122,7 @@ const handleStart = async () => {
     const t = await startService(activeTicket.value.id)
     await afterAction(`${t.ticketNumber} — service started`)
   } catch (err: any) {
-    showToast(err?.message || 'Failed to start service')
+    showToast(err?.message || 'Failed to start service', 'error')
   } finally {
     acting.value = null
   }
@@ -135,7 +135,7 @@ const handleServe = async () => {
     const t = await completeService(activeTicket.value.id)
     await afterAction(`${t.ticketNumber}${ticketLabel(t)} completed`)
   } catch (err: any) {
-    showToast(err?.message || 'Failed to complete ticket')
+    showToast(err?.message || 'Failed to complete ticket', 'error')
   } finally {
     acting.value = null
   }
@@ -148,7 +148,7 @@ const handleSkip = async () => {
     const t = await skipTicket(activeTicket.value.id)
     await afterAction(`${t.ticketNumber} skipped to back of queue`)
   } catch (err: any) {
-    showToast(err?.message || 'Failed to skip ticket')
+    showToast(err?.message || 'Failed to skip ticket', 'error')
   } finally {
     acting.value = null
   }
@@ -161,7 +161,7 @@ const handleRecall = async () => {
     const t = await recallTicket(activeTicket.value.id)
     await afterAction(`${(t?.ticketNumber || activeTicket.value.ticketNumber)} re-notified`)
   } catch (err: any) {
-    showToast(err?.message || 'Failed to re-notify')
+    showToast(err?.message || 'Failed to re-notify', 'error')
   } finally {
     acting.value = null
   }
@@ -205,7 +205,7 @@ const handleSelect = (t: any) => {
         <button
           v-if="activeTicket.status === 'IN_SERVICE'"
           :disabled="acting !== null"
-          class="btn btn-sm btn-primary"
+          class="btn btn-sm btn-success"
           @click="handleServe"
         >
           <Loader2 v-if="acting === 'serve'" class="h-3.5 w-3.5 animate-spin" />
@@ -213,7 +213,7 @@ const handleSelect = (t: any) => {
           Complete
         </button>
         <button
-          v-if="activeTicket.status === 'CALLED' || activeTicket.status === 'IN_SERVICE'"
+          v-if="activeTicket.status === 'CALLED'"
           :disabled="acting !== null"
           class="btn btn-sm btn-outline"
           @click="handleRecall"
@@ -223,7 +223,7 @@ const handleSelect = (t: any) => {
           Recall
         </button>
         <button
-          v-if="activeTicket.status === 'CALLED' || activeTicket.status === 'IN_SERVICE'"
+          v-if="activeTicket.status === 'CALLED'"
           :disabled="acting !== null"
           class="btn btn-sm btn-ghost-danger"
           @click="handleSkip"
