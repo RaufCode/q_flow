@@ -7,6 +7,8 @@ import {
   handleUpdateTicketStatus,
   handleRecallTicket,
   handleSkipTicket,
+  handleStartService,
+  handleCompleteService,
 } from '../controllers/staff.controller.js';
 
 import { requireCounterStaff } from '../middlewares/staff.middleware.js';
@@ -310,6 +312,86 @@ router.patch('/tickets/:id/status', handleUpdateTicketStatus);
  *         description: Ticket not found
  */
 router.post('/tickets/:id/recall', handleRecallTicket);
+
+/**
+ * @openapi
+ * /api/staff/tickets/{id}/start:
+ *   post:
+ *     summary: Mark a ticket's service as started
+ *     description: Transitions a CALLED ticket to IN_SERVICE once the customer arrives at the counter.
+ *     tags: [Counter Staff]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Unique ticket ID
+ *     responses:
+ *       200:
+ *         description: Service started
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Service started.
+ *                 ticket:
+ *                   type: object
+ *       400:
+ *         description: Ticket must be in CALLED status to start service
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden - requires counter staff role
+ *       404:
+ *         description: Ticket not found
+ */
+router.post('/tickets/:id/start', handleStartService);
+
+/**
+ * @openapi
+ * /api/staff/tickets/{id}/complete:
+ *   post:
+ *     summary: Mark a ticket's service as complete
+ *     description: Transitions an IN_SERVICE ticket to SERVED when the transaction is finished.
+ *     tags: [Counter Staff]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: Unique ticket ID
+ *     responses:
+ *       200:
+ *         description: Service completed
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                   example: Service completed.
+ *                 ticket:
+ *                   type: object
+ *       400:
+ *         description: Ticket must be in IN_SERVICE status to mark as served
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden - requires counter staff role
+ *       404:
+ *         description: Ticket not found
+ */
+router.post('/tickets/:id/complete', handleCompleteService);
 
 /**
  * @openapi
