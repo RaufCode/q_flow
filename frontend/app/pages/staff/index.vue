@@ -37,7 +37,7 @@ const setPage = (page: string) => {
   router.replace({ query })
 }
 
-const { message, visible, showToast } = useToast()
+const { message, visible, tone, showToast } = useToast()
 provide('showToast', showToast)
 provide('selectedTicketId', selectedTicketId)
 
@@ -89,6 +89,6 @@ const handleSignOut = async () => {
       />
       <StaffHistory v-else-if="activePage === 'history'" />
     </DashboardLayout>
-    <ToastMessage :message="message" :visible="visible" />
+    <ToastMessage :message="message" :visible="visible" :tone="tone" />
   </div>
 </template>

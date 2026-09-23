@@ -39,7 +39,7 @@ const navItems = [
   { key: 'qr', label: 'QR Codes', icon: QrCode },
 ]
 
-const { message, visible, showToast } = useToast()
+const { message, visible, tone, showToast } = useToast()
 provide('showToast', showToast)
 
 const userName = computed(() => user.value?.fullName || 'Administrator')
@@ -68,6 +68,6 @@ const handleSignOut = async () => {
       <AdminTickets v-else-if="activePage === 'tickets'" />
       <AdminQR v-else-if="activePage === 'qr'" />
     </DashboardLayout>
-    <ToastMessage :message="message" :visible="visible" />
+    <ToastMessage :message="message" :visible="visible" :tone="tone" />
   </div>
 </template>
