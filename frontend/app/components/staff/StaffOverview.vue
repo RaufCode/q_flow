@@ -21,7 +21,6 @@ const activeTicket = computed(() => overview.value?.activeTicket ?? null)
 const servedCount = computed(() => sessionTickets.value.filter((t) => t.status === 'SERVED').length)
 const handledCount = computed(() => sessionTickets.value.filter((t) => !['WAITING', 'CALLED'].includes(t.status)).length)
 const counterLabel = computed(() => overview.value?.counter?.counterName || 'No counter bound')
-const siteName = 'KFC'
 const greeting = ref('')
 
 onMounted(() => {
@@ -93,7 +92,7 @@ const activityItems = computed(() =>
       <div>
         <h2 class="text-xl font-extrabold tracking-tight text-foreground">{{ greeting }}</h2>
         <p class="mt-0.5 text-sm text-muted-foreground">
-          Operating <span class="font-semibold text-foreground">{{ counterLabel }}</span> &middot; {{ siteName }}
+          Operating <span class="font-semibold text-foreground">{{ counterLabel }}</span>
         </p>
       </div>
       <button

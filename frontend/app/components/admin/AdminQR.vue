@@ -6,7 +6,7 @@ import { trim, isValidUrl } from '~/utils/validate'
 
 const showToast = inject<(msg: string) => void>('showToast', () => {})
 
-const DEFAULT_SITE = 'KFC'
+const DEFAULT_SITE = 'QFlow'
 const URL_KEY = 'qflow_checkin_url'
 
 interface QrAssets {
@@ -106,7 +106,7 @@ const downloadName = () => `${DEFAULT_SITE.toLowerCase()}-check-in-qr.png`
       </span>
       <h2 class="text-xl font-extrabold tracking-tight text-foreground">QR Code Generator</h2>
       <p class="mx-auto mt-1 max-w-sm text-sm text-muted-foreground">
-        Create a check-in QR code for {{ DEFAULT_SITE }} customers.
+        Create a check-in QR code for your customers.
       </p>
 
       <!-- URL form -->
@@ -120,7 +120,7 @@ const downloadName = () => `${DEFAULT_SITE.toLowerCase()}-check-in-qr.png`
           spellcheck="false"
           class="input font-mono"
           :class="urlTouched && urlError ? 'border-danger' : ''"
-          placeholder="https://your-site.com/ticket-registration?site=KFC"
+          placeholder="https://your-site.com/ticket-registration?site=QFlow"
           @blur="validateUrlField"
           @input="urlTouched && validateUrl()"
         />
@@ -152,9 +152,6 @@ const downloadName = () => `${DEFAULT_SITE.toLowerCase()}-check-in-qr.png`
             class="mx-auto w-full"
             style="image-rendering: pixelated"
           />
-          <span class="mt-3 block text-center text-xs font-bold uppercase tracking-widest text-gray-500">
-            {{ DEFAULT_SITE }}
-          </span>
         </div>
 
         <p class="max-w-full truncate rounded-md bg-input-bg px-3 py-2 font-mono text-[11px] text-muted-foreground" :title="qr.targetUrl">

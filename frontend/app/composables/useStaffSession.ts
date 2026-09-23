@@ -1,4 +1,5 @@
 import { apiGet, apiPost, apiPatch } from '~/utils/api'
+import { isValidResourceId, sanitizeResourceId, sanitizeSearch } from '~/utils/validate'
 
 export interface StaffCounter {
   id: string
@@ -56,6 +57,30 @@ export function useStaffSession() {
     sessionTickets.value.filter((t) => t.status !== 'WAITING'),
   )
 
+  /**
+   * Strictly validate + sanitize a resource ID before it's interpolated into a
+   * URL path. Throws a safe, human-readable error instead of hitting the API
+   * with a malformed identifier.
+   */
+  const requireResourceId = (id: string): string => {
+    const clean = sanitizeResourceId(id)
+    if (!isValidResourceId(clean)) {
+      throw new Error('Invalid ticket ID.')
+    }
+    return clean
+  }
+
+  /**
+   * Normalize the varied ticket payloads the backend returns across endpoints
+   * (nested `{ ticket }` vs. flat `{ id, ticketNumber, status }`).
+   */
+  const toTicket = (payload: any): StaffTicket | undefined => {
+    if (!payload) return undefined
+    if (payload.ticket) return payload.ticket
+    if (payload.id && payload.ticketNumber) return payload as StaffTicket
+    return undefined
+  }
+
   const trackTicket = (ticket?: StaffTicket | null) => {
     if (!ticket?.id) return
     const next = sessionTickets.value.filter((t) => t.id !== ticket.id)
@@ -100,50 +125,106 @@ export function useStaffSession() {
     const res = await apiPost<{ ticket: StaffTicket }>(
       `/staff/counters/${employeeId.value}/call-next`,
     )
-    trackTicket(res?.ticket)
+    const ticket = toTicket(res)
+    trackTicket(ticket)
     await refresh(true)
-    return res?.ticket
+    return ticket
   }
 
   const recallTicket = async (id: string) => {
-    const res = await apiPost<{ message: string; ticket: StaffTicket }>(`/staff/tickets/${id}/recall`)
-    trackTicket(res?.ticket)
+    const ticketId = requireResourceId(id)
+    const res = await apiPost<{ message: string; ticket: StaffTicket }>(
+      `/staff/tickets/${ticketId}/recall`,
+    )
+    const ticket = toTicket(res)
+    trackTicket(ticket)
     await refresh(true)
-    return res?.ticket
+    return ticket
+  }
+
+  const startService = async (id: string) => {
+    const ticketId = requireResourceId(id)
+    let res: { message: string; ticket: StaffTicket }
+    try {
+      // Canonical endpoint: POST /staff/tickets/{id}/start
+      res = await apiPost<{ message: string; ticket: StaffTicket }>(
+        `/staff/tickets/${ticketId}/start`,
+      )
+    } catch (err: any) {
+      // Route isn't deployed yet — fall back to the generic status PATCH.
+      if (err?.status !== 404) throw err
+      res = await apiPatch<{ message: string; ticket: StaffTicket }>(
+        `/staff/tickets/${ticketId}/status`,
+        { status: 'IN_SERVICE' },
+      )
+    }
+    const ticket = toTicket(res)
+    trackTicket(ticket)
+    await refresh(true)
+    return ticket
   }
 
   const completeService = async (id: string) => {
-    const res = await apiPatch<{ message: string; ticket: StaffTicket }>(
-      `/staff/tickets/${id}/status`,
-      { status: 'SERVED' },
-    )
-    trackTicket(res?.ticket)
+    const ticketId = requireResourceId(id)
+    let res: { message: string; ticket: StaffTicket }
+    try {
+      // Canonical endpoint: POST /staff/tickets/{id}/complete
+      res = await apiPost<{ message: string; ticket: StaffTicket }>(
+        `/staff/tickets/${ticketId}/complete`,
+      )
+    } catch (err: any) {
+      // Route isn't deployed yet — fall back to the generic status PATCH.
+      if (err?.status !== 404) throw err
+      res = await apiPatch<{ message: string; ticket: StaffTicket }>(
+        `/staff/tickets/${ticketId}/status`,
+        { status: 'SERVED' },
+      )
+    }
+    const ticket = toTicket(res)
+    trackTicket(ticket)
     await refresh(true)
-    return res?.ticket
+    return ticket
   }
 
   const noShowTicket = async (id: string) => {
+    const ticketId = requireResourceId(id)
     const res = await apiPatch<{ message: string; ticket: StaffTicket }>(
-      `/staff/tickets/${id}/status`,
+      `/staff/tickets/${ticketId}/status`,
       { status: 'NO_SHOW' },
     )
-    trackTicket(res?.ticket)
+    const ticket = toTicket(res)
+    trackTicket(ticket)
     await refresh(true)
-    return res?.ticket
+    return ticket
   }
 
   const skipTicket = async (id: string) => {
-    const res = await apiPost<{ message: string; ticket: StaffTicket }>(
-      `/counters/tickets/${id}/skip`,
-    )
-    trackTicket(res?.ticket)
+    const ticketId = requireResourceId(id)
+    const postSkip = (base: string) =>
+      apiPost<{ message: string; ticket: StaffTicket }>(`${base}/${ticketId}/skip`)
+    let res: { message: string; ticket: StaffTicket }
+    try {
+      // Specified endpoint: POST /counters/tickets/{id}/skip
+      res = await postSkip('/counters/tickets')
+    } catch (err: any) {
+      if (err?.status !== 404) throw err
+      try {
+        // Documented endpoint: POST /staff/tickets/{id}/skip
+        res = await postSkip('/staff/tickets')
+      } catch (err2: any) {
+        if (err2?.status !== 404) throw err2
+        throw new Error('Skip is unavailable — the backend has not deployed this endpoint yet.')
+      }
+    }
+    const ticket = toTicket(res)
+    trackTicket(ticket)
     await refresh(true)
-    return res?.ticket
+    return ticket
   }
 
   /**
    * Server-side ticket list with the same filters as the admin tickets page.
-   * Pass the query params straight through — the backend does the work.
+   * Query params are validated and sanitized before they leave the client.
    */
   const fetchTickets = async (options: {
     status?: string
@@ -151,11 +232,16 @@ export function useStaffSession() {
     page?: number
     limit?: number
   } = {}): Promise<TicketListResult> => {
+    const knownStatuses = ['WAITING', 'CALLED', 'IN_SERVICE', 'SERVED', 'SKIPPED', 'CANCELLED', 'AUTO_CANCELLED']
+    const status = knownStatuses.includes(options.status || '') ? (options.status as string) : ''
+    const search = sanitizeSearch(options.search, 100)
+    const page = Math.max(1, Math.min(100000, Math.floor(Number(options.page) || 1)))
+    const limit = Math.max(1, Math.min(100, Math.floor(Number(options.limit) || 10)))
     return apiGet<TicketListResult>('/staff/tickets', {
-      status: options.status || '',
-      search: options.search || '',
-      page: options.page || 1,
-      limit: options.limit || 10,
+      status,
+      search,
+      page,
+      limit,
     })
   }
 
@@ -177,6 +263,7 @@ export function useStaffSession() {
     refresh,
     callNext,
     recallTicket,
+    startService,
     completeService,
     noShowTicket,
     skipTicket,

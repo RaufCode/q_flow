@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import { MessageSquare, Phone, Bell, Loader2, ArrowLeft, User, ListOrdered, Clock3, XCircle, SkipForward } from 'lucide-vue-next'
+import { MessageSquare, Phone, Bell, Loader2, ArrowLeft, User, ListOrdered, Clock3, XCircle, SkipForward, Play } from 'lucide-vue-next'
 import { formatTime, formatDate, formatDateTime, channelLabel } from '~/utils/format'
 
 defineEmits<{ back: [] }>()
 
-const { overview, sessionTickets, recallTicket, completeService, noShowTicket, skipTicket } = useStaffSession()
+const { overview, sessionTickets, recallTicket, startService, completeService, noShowTicket, skipTicket } = useStaffSession()
 const showToast = inject<(msg: string) => void>('showToast', () => {})
 const selectedTicketId = inject<Ref<string | null>>('selectedTicketId', ref(null))
 
@@ -42,10 +42,12 @@ const run = async (fn: (id: string) => Promise<any>, message: (t: any) => string
   }
 }
 
-const handleRecall = () => run(recallTicket, (t) => `${t.ticketNumber} re-notified`)
-const handleComplete = () => run(completeService, (t) => `${t.ticketNumber} completed`)
-const handleNoShow = () => run(noShowTicket, (t) => `${t.ticketNumber} marked as no-show`)
-const handleSkip = () => run(skipTicket, (t) => `${t.ticketNumber} skipped to back of queue`)
+const ticketNumber = (t: any) => t?.ticketNumber ?? ticket.value?.ticketNumber ?? ''
+const handleRecall = () => run(recallTicket, (t) => `${ticketNumber(t)} re-notified`)
+const handleStart = () => run(startService, (t) => `${ticketNumber(t)} — service started`)
+const handleComplete = () => run(completeService, (t) => `${ticketNumber(t)} completed`)
+const handleNoShow = () => run(noShowTicket, (t) => `${ticketNumber(t)} marked as no-show`)
+const handleSkip = () => run(skipTicket, (t) => `${ticketNumber(t)} skipped to back of queue`)
 
 const timeline = computed(() => {
   if (!ticket.value) return []
@@ -183,16 +185,7 @@ const timeline = computed(() => {
         <h3 class="mb-4 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Actions</h3>
 
         <template v-if="['CALLED', 'IN_SERVICE'].includes(ticket.status)">
-          <div class="flex gap-3">
-            <button
-              :disabled="acting"
-              class="btn btn-md btn-outline flex-1"
-              @click="handleRecall"
-            >
-              <Loader2 v-if="acting" class="h-4 w-4 animate-spin" />
-              <Bell v-else class="h-4 w-4" />
-              Recall
-            </button>
+          <div class="flex flex-wrap gap-3">
             <button
               v-if="ticket.status === 'IN_SERVICE'"
               :disabled="acting"
@@ -205,6 +198,25 @@ const timeline = computed(() => {
             <button
               v-if="ticket.status === 'CALLED'"
               :disabled="acting"
+              class="btn btn-md btn-primary flex-1"
+              @click="handleStart"
+            >
+              <Loader2 v-if="acting" class="h-4 w-4 animate-spin" />
+              <Play v-else class="h-4 w-4" />
+              Start
+            </button>
+            <button
+              :disabled="acting"
+              class="btn btn-md btn-outline flex-1"
+              @click="handleRecall"
+            >
+              <Loader2 v-if="acting" class="h-4 w-4 animate-spin" />
+              <Bell v-else class="h-4 w-4" />
+              Recall
+            </button>
+            <button
+              v-if="ticket.status === 'CALLED'"
+              :disabled="acting"
               class="btn btn-md btn-ghost-danger"
               @click="handleNoShow"
             >
@@ -213,7 +225,6 @@ const timeline = computed(() => {
               No Show
             </button>
             <button
-              v-if="ticket.status === 'CALLED'"
               :disabled="acting"
               class="btn btn-md btn-outline"
               @click="handleSkip"

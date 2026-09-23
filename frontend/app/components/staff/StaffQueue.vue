@@ -8,6 +8,7 @@ import {
   Bell,
   CheckCircle2,
   SkipForward,
+  Play,
 } from 'lucide-vue-next'
 import { formatTime, channelLabel, statusLabel } from '~/utils/format'
 
@@ -17,6 +18,7 @@ const {
   overview,
   fetchTickets,
   callNext,
+  startService,
   completeService,
   skipTicket,
   recallTicket,
@@ -42,13 +44,6 @@ const STATUS_PILLS = [
 
 const activeTicket = computed(() => overview.value?.activeTicket ?? null)
 const waitingCount = computed(() => overview.value?.waiting?.length ?? 0)
-
-const nextUp = computed(() => {
-  const waiting = [...(overview.value?.waiting ?? [])]
-    .filter((t) => t.status === 'WAITING')
-    .sort((a, b) => (a.currentPosition || 0) - (b.currentPosition || 0))
-  return waiting[0] ?? null
-})
 
 const rows = computed(() =>
   [...tickets.value]
@@ -104,18 +99,30 @@ const afterAction = async (message: string) => {
   await Promise.all([loadQueue(true)])
 }
 
+const ticketLabel = (t: any) => (t?.customerName ? ` — ${t.customerName}` : '')
+
 const handleCallNext = async () => {
   acting.value = 'call-next'
   try {
-    if (activeTicket.value?.status === 'IN_SERVICE') {
-      await completeService(activeTicket.value.id)
-    }
     const ticket = await callNext()
     if (ticket) {
-      await afterAction(`Calling ${ticket.ticketNumber} — ${ticket.customerName}`)
+      await afterAction(`Calling ${ticket.ticketNumber}${ticketLabel(ticket)}`)
     }
   } catch (err: any) {
     showToast(err?.message || 'Failed to call next customer')
+  } finally {
+    acting.value = null
+  }
+}
+
+const handleStart = async () => {
+  if (!activeTicket.value) return
+  acting.value = 'start'
+  try {
+    const t = await startService(activeTicket.value.id)
+    await afterAction(`${t.ticketNumber} — service started`)
+  } catch (err: any) {
+    showToast(err?.message || 'Failed to start service')
   } finally {
     acting.value = null
   }
@@ -126,9 +133,9 @@ const handleServe = async () => {
   acting.value = 'serve'
   try {
     const t = await completeService(activeTicket.value.id)
-    await afterAction(`${t.ticketNumber} — ${t.customerName} marked served`)
+    await afterAction(`${t.ticketNumber}${ticketLabel(t)} completed`)
   } catch (err: any) {
-    showToast(err?.message || 'Failed to mark served')
+    showToast(err?.message || 'Failed to complete ticket')
   } finally {
     acting.value = null
   }
@@ -152,7 +159,7 @@ const handleRecall = async () => {
   acting.value = 'recall'
   try {
     const t = await recallTicket(activeTicket.value.id)
-    await afterAction(`${t.ticketNumber} re-notified`)
+    await afterAction(`${(t?.ticketNumber || activeTicket.value.ticketNumber)} re-notified`)
   } catch (err: any) {
     showToast(err?.message || 'Failed to re-notify')
   } finally {
@@ -183,7 +190,18 @@ const handleSelect = (t: any) => {
           <span class="h-1.5 w-1.5 rounded-full bg-primary" />
           {{ activeTicket.ticketNumber }} · {{ activeTicket.customerName }}
           <span class="text-muted-foreground">({{ statusLabel(activeTicket.status) }})</span>
+          <span v-if="activeTicket.skipCount > 0" class="text-muted-foreground">· skipped {{ activeTicket.skipCount }}/3</span>
         </span>
+        <button
+          v-if="activeTicket.status === 'CALLED'"
+          :disabled="acting !== null"
+          class="btn btn-sm btn-primary"
+          @click="handleStart"
+        >
+          <Loader2 v-if="acting === 'start'" class="h-3.5 w-3.5 animate-spin" />
+          <Play v-else class="h-3.5 w-3.5" />
+          Start
+        </button>
         <button
           v-if="activeTicket.status === 'IN_SERVICE'"
           :disabled="acting !== null"
@@ -192,7 +210,7 @@ const handleSelect = (t: any) => {
         >
           <Loader2 v-if="acting === 'serve'" class="h-3.5 w-3.5 animate-spin" />
           <CheckCircle2 v-else class="h-3.5 w-3.5" />
-          Serve
+          Complete
         </button>
         <button
           v-if="activeTicket.status === 'CALLED' || activeTicket.status === 'IN_SERVICE'"
@@ -216,20 +234,15 @@ const handleSelect = (t: any) => {
         </button>
       </div>
 
-      <!-- Call next with the upcoming customer's name -->
+      <!-- Call next (customer name & number live in the queue list on the side) -->
       <button
-        :disabled="acting !== null || waitingCount === 0"
+        :disabled="acting !== null || waitingCount === 0 || (activeTicket && ['CALLED', 'IN_SERVICE'].includes(activeTicket.status))"
         class="btn btn-primary !rounded-lg !px-4 !py-2.5 gap-2"
         @click="handleCallNext"
       >
         <Loader2 v-if="acting === 'call-next'" class="h-4 w-4 animate-spin" />
         <UserCheck v-else class="h-4 w-4" />
-        <span class="flex flex-col items-start leading-tight">
-          <span>{{ acting === 'call-next' ? 'Calling…' : 'Call Next' }}</span>
-          <span v-if="nextUp" class="text-[11px] font-semibold opacity-90">
-            {{ nextUp.customerName }} · {{ nextUp.ticketNumber }}
-          </span>
-        </span>
+        <span>{{ acting === 'call-next' ? 'Calling…' : 'Call Next' }}</span>
       </button>
     </div>
 

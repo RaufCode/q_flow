@@ -164,3 +164,36 @@ export function employeeIdMessage(value?: string | null): string {
   if (!EMPLOYEE_ID_RE.test(v)) return 'Employee ID can only contain letters, numbers and dashes.'
   return ''
 }
+
+// ---------------- Resource ID (tickets, counters, users) ----------------
+// Backend IDs are UUIDs (Prisma `@default(uuid())`), but legacy seeds may use
+// cuid / "tkt_…" / "clx…" style ids. Length 8–64 and a safe charset prevent
+// anything that could reach the API path as injection / traversal payloads.
+const RESOURCE_ID_RE = /^[A-Za-z0-9._-]{8,64}$/
+
+export function sanitizeResourceId(value?: string | null): string {
+  return trim(value).replace(/[\u0000-\u001f\u007f]/g, '')
+}
+
+export function isValidResourceId(value?: string | null): boolean {
+  const v = sanitizeResourceId(value)
+  if (!v) return false
+  return RESOURCE_ID_RE.test(v)
+}
+
+export function resourceIdMessage(value?: string | null): string {
+  const v = sanitizeResourceId(value)
+  if (!v) return 'ID is required.'
+  if (!RESOURCE_ID_RE.test(v)) return 'ID is invalid.'
+  return ''
+}
+
+// ---------------- Free-form search ----------------
+// Strips control characters, trims, collapses whitespace and caps length so a
+// malformed query string can't be sent to the API.
+export function sanitizeSearch(value?: string | null, max = 100): string {
+  return trim(value ?? '')
+    .replace(/[\u0000-\u001f\u007f]/g, '')
+    .replace(/\s+/g, ' ')
+    .slice(0, max)
+}
