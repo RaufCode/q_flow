@@ -62,8 +62,28 @@ Use the login pages to sign in, then try each dashboard below.
 ### Staff dashboard tabs (left menu)
 
 - **Overview** – your numbers and the next ticket to call.
-- **Queue** – the waiting list sorted by position (oldest first). Use the **All / Waiting / Called** pills and the search box to narrow it down. The **Call Next** button shows the name of the customer whose turn it is, and quick **Serve**, **Skip** and **Recall** actions sit beside the ticket currently being served.
+- **Queue** – the waiting list sorted by position (oldest first). Use the **All / Waiting / Called** pills and the search box to narrow it down. The **Call Next** button pulls the next customer to your counter, and quick actions sit beside the ticket currently being called or served.
 - **History** – tickets already finished (skipped, served, cancelled, auto-cancelled). Filter by status with the dropdown and search by name, ticket number or phone.
+
+### Ticket actions by status
+
+Every action button follows the ticket's current status, so you can only do what
+makes sense at that point in the flow:
+
+| Status | Available actions |
+| ------ | ----------------- |
+| **Called** | Start Service, Recall, Skip, Mark as No Show |
+| **In service** | Complete Service |
+| **Waiting** | (none—use **Call Next** on the Queue page) |
+| **Served / Skipped / Cancelled** | none |
+
+- **Start Service** – customer arrived; moves the ticket to *In service*.
+- **Complete Service** – transaction finished; marks the ticket *Served*.
+- **Recall** – re-sends the counter-call notification without changing the status.
+- **Skip** – sends the customer to the back of the queue (auto-cancels after 3 skips).
+- **Mark as No Show** – cancels the ticket immediately.
+
+Destructive actions (**Skip** and **Mark as No Show**) ask for confirmation first.
 
 ### Choosing a counter (staff)
 
