@@ -88,7 +88,13 @@ export function useStaffSession() {
     sessionTickets.value = next.slice(0, 50)
   }
 
-  const refresh = async (silent = false) => {
+  /**
+   * The deployed backend's `current-ticket` returns an arbitrary CALLED or
+   * IN_SERVICE ticket (findFirst with no ordering), so after a staff action the
+   * focused ticket (the one they just started/called) is preferred when it is
+   * still active; otherwise the endpoint result is used.
+   */
+  const refresh = async (silent = false, focus?: StaffTicket | null) => {
     if (!silent) loading.value = true
     if (!employeeId.value) {
       shiftRequired.value = true
@@ -101,7 +107,10 @@ export function useStaffSession() {
         apiGet<{ ticket: StaffTicket | null }>(`/staff/counters/${employeeId.value}/current-ticket`),
         apiGet<{ tickets: StaffTicket[] }>(`/staff/counters/${employeeId.value}/queue`),
       ])
-      const activeTicket = currentRes.ticket ?? null
+      const activeTicket =
+        focus && ['CALLED', 'IN_SERVICE'].includes(focus.status)
+          ? focus
+          : (currentRes.ticket ?? null)
       overview.value = {
         counter: (user.value?.activeCounter as StaffCounter) ?? null,
         activeTicket,
@@ -127,7 +136,7 @@ export function useStaffSession() {
     )
     const ticket = toTicket(res)
     trackTicket(ticket)
-    await refresh(true)
+    await refresh(true, ticket)
     return ticket
   }
 
@@ -138,7 +147,7 @@ export function useStaffSession() {
     )
     const ticket = toTicket(res)
     trackTicket(ticket)
-    await refresh(true)
+    await refresh(true, ticket)
     return ticket
   }
 
@@ -149,7 +158,7 @@ export function useStaffSession() {
     )
     const ticket = toTicket(res)
     trackTicket(ticket)
-    await refresh(true)
+    await refresh(true, ticket)
     return ticket
   }
 
@@ -160,7 +169,7 @@ export function useStaffSession() {
     )
     const ticket = toTicket(res)
     trackTicket(ticket)
-    await refresh(true)
+    await refresh(true, ticket)
     return ticket
   }
 
@@ -172,7 +181,7 @@ export function useStaffSession() {
     )
     const ticket = toTicket(res)
     trackTicket(ticket)
-    await refresh(true)
+    await refresh(true, ticket)
     return ticket
   }
 
@@ -183,7 +192,7 @@ export function useStaffSession() {
     )
     const ticket = toTicket(res)
     trackTicket(ticket)
-    await refresh(true)
+    await refresh(true, ticket)
     return ticket
   }
 
