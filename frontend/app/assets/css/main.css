@@ -35,6 +35,8 @@
   --color-danger-border: #fecaca;
   --color-danger-light-border: #fee2e2;
   --color-success: #16a34a;
+  --color-success-hover: #15803d;
+  --color-success-active: #166534;
   --color-success-light: #dcfce7;
   --color-success-check: #22c55e;
   --color-warning: #d97706;
@@ -86,6 +88,8 @@
   --color-danger-border: rgb(248 113 113 / 0.35);
   --color-danger-light-border: rgb(248 113 113 / 0.25);
   --color-success: #4ade80;
+  --color-success-hover: #34d399;
+  --color-success-active: #16a34a;
   --color-success-light: rgb(74 222 128 / 0.14);
   --color-success-check: #4ade80;
   --color-warning: #fbbf24;
@@ -188,6 +192,9 @@ body {
   }
   .btn-ghost-danger {
     @apply border border-danger-border bg-transparent text-danger hover:bg-danger-light;
+  }
+  .btn-success {
+    @apply bg-success text-white shadow-sm hover:bg-success-hover active:bg-success-active;
   }
   .btn-white {
     @apply bg-white text-primary hover:bg-primary-light active:bg-primary-lighter shadow-sm;
