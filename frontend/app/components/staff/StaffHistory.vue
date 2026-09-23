@@ -44,7 +44,7 @@ const load = async (silent = false) => {
     )
     page.value = 1
   } catch (err: any) {
-    showToast(err?.message || 'Failed to load history')
+    showToast(err?.message || 'Failed to load history', 'error')
   } finally {
     loading.value = false
   }
