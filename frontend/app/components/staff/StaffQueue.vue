@@ -22,6 +22,7 @@ const {
   completeService,
   skipTicket,
   recallTicket,
+  noShowTicket,
   trackTicket,
   error,
 } = useStaffSession()
@@ -104,6 +105,11 @@ const ticketLabel = (t: any) => (t?.customerName ? ` — ${t.customerName}` : ''
 const handleCallNext = async () => {
   acting.value = 'call-next'
   try {
+    const lingering = activeTicket.value && activeTicket.value.status === 'CALLED' ? activeTicket.value : null
+    if (lingering) {
+      await noShowTicket(lingering.id)
+      showToast(`${lingering.ticketNumber} never arrived — cancelled. Calling next.`, 'info')
+    }
     const ticket = await callNext()
     if (ticket) {
       await afterAction(`Calling ${ticket.ticketNumber}${ticketLabel(ticket)}`)
@@ -235,15 +241,23 @@ const handleSelect = (t: any) => {
       </div>
 
       <!-- Call next (customer name & number live in the queue list on the side) -->
-      <button
-        :disabled="acting !== null || waitingCount === 0 || (activeTicket && ['CALLED', 'IN_SERVICE'].includes(activeTicket.status))"
-        class="btn btn-primary !rounded-lg !px-4 !py-2.5 gap-2"
-        @click="handleCallNext"
-      >
-        <Loader2 v-if="acting === 'call-next'" class="h-4 w-4 animate-spin" />
-        <UserCheck v-else class="h-4 w-4" />
-        <span>{{ acting === 'call-next' ? 'Calling…' : 'Call Next' }}</span>
-      </button>
+      <div class="flex flex-col items-end gap-1.5">
+        <button
+          :disabled="acting !== null || waitingCount === 0 || activeTicket?.status === 'IN_SERVICE'"
+          class="btn btn-primary !rounded-lg !px-4 !py-2.5 gap-2"
+          @click="handleCallNext"
+        >
+          <Loader2 v-if="acting === 'call-next'" class="h-4 w-4 animate-spin" />
+          <UserCheck v-else class="h-4 w-4" />
+          <span>{{ acting === 'call-next' ? 'Calling…' : 'Call Next' }}</span>
+        </button>
+        <p
+          v-if="activeTicket?.status === 'IN_SERVICE' || waitingCount === 0"
+          class="text-[11px] font-semibold text-muted-foreground"
+        >
+          {{ activeTicket?.status === 'IN_SERVICE' ? 'Finish the current service first' : 'No customers waiting' }}
+        </p>
+      </div>
     </div>
 
     <div class="flex flex-col gap-3 sm:flex-row">
