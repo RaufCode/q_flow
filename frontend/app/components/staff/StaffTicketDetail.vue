@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { MessageSquare, Phone, Bell, Loader2, ArrowLeft, User, ListOrdered, Clock3, XCircle, SkipForward, Play } from 'lucide-vue-next'
+import { MessageSquare, Phone, Bell, Loader2, ArrowLeft, User, ListOrdered, Clock3, XCircle, SkipForward, Play, CheckCircle2 } from 'lucide-vue-next'
 import { formatTime, formatDate, formatDateTime, channelLabel } from '~/utils/format'
 
 defineEmits<{ back: [] }>()
@@ -19,7 +19,9 @@ const inQueue = computed(() => ticket.value ? ['WAITING', 'CALLED'].includes(tic
 const acting = ref(false)
 const errorMsg = ref('')
 
-watch(ticket, () => { errorMsg.value = '' })
+const confirmState = ref<{ title: string; body: string; label: string; action: () => Promise<any> } | null>(null)
+
+watch(ticket, () => { errorMsg.value = ''; confirmState.value = null })
 
 const channelIcon = computed(() => {
   if (ticket.value?.preferredChannel === 'WHATSAPP') return MessageSquare
@@ -33,21 +35,43 @@ const run = async (fn: (id: string) => Promise<any>, message: (t: any) => string
   errorMsg.value = ''
   try {
     const updated = await fn(ticket.value.id)
-    showToast(message(updated))
+    showToast(message(updated), 'success')
   } catch (err: any) {
     errorMsg.value = err?.message || 'Action failed.'
-    showToast(errorMsg.value)
+    showToast(errorMsg.value, 'error')
   } finally {
     acting.value = false
   }
+}
+
+const askConfirm = (action: () => Promise<any>, title: string, body: string, label: string) => {
+  confirmState.value = { title, body, label, action }
+}
+
+const runConfirmed = () => {
+  const state = confirmState.value
+  confirmState.value = null
+  if (state) state.action()
 }
 
 const ticketNumber = (t: any) => t?.ticketNumber ?? ticket.value?.ticketNumber ?? ''
 const handleRecall = () => run(recallTicket, (t) => `${ticketNumber(t)} re-notified`)
 const handleStart = () => run(startService, (t) => `${ticketNumber(t)} — service started`)
 const handleComplete = () => run(completeService, (t) => `${ticketNumber(t)} completed`)
-const handleNoShow = () => run(noShowTicket, (t) => `${ticketNumber(t)} marked as no-show`)
-const handleSkip = () => run(skipTicket, (t) => `${ticketNumber(t)} skipped to back of queue`)
+const handleNoShow = () =>
+  askConfirm(
+    () => run(noShowTicket, (t) => `${ticketNumber(t)} marked as no-show`),
+    'Mark as no-show?',
+    `${ticket.value?.ticketNumber} (${ticket.value?.customerName}) will be cancelled immediately.`,
+    'Mark No Show',
+  )
+const handleSkip = () =>
+  askConfirm(
+    () => run(skipTicket, (t) => `${ticketNumber(t)} skipped to back of queue`),
+    'Skip this ticket?',
+    `${ticket.value?.ticketNumber} (${ticket.value?.customerName}) will move to the back of the queue. They get 3 chances before auto-cancellation.`,
+    'Yes, Skip',
+  )
 
 const timeline = computed(() => {
   if (!ticket.value) return []
@@ -184,45 +208,29 @@ const timeline = computed(() => {
       <div class="card p-5">
         <h3 class="mb-4 text-[11px] font-bold uppercase tracking-wider text-muted-foreground">Actions</h3>
 
-        <template v-if="['CALLED', 'IN_SERVICE'].includes(ticket.status)">
-          <div class="flex flex-wrap gap-3">
-            <button
-              v-if="ticket.status === 'IN_SERVICE'"
-              :disabled="acting"
-              class="btn btn-md btn-primary flex-1"
-              @click="handleComplete"
-            >
-              <Loader2 v-if="acting" class="h-4 w-4 animate-spin" />
-              Complete
-            </button>
-            <button
-              v-if="ticket.status === 'CALLED'"
-              :disabled="acting"
-              class="btn btn-md btn-primary flex-1"
-              @click="handleStart"
-            >
-              <Loader2 v-if="acting" class="h-4 w-4 animate-spin" />
-              <Play v-else class="h-4 w-4" />
-              Start
-            </button>
+        <template v-if="ticket.status === 'CALLED'">
+          <p class="mb-3 flex items-center gap-1.5 text-xs font-semibold text-muted-foreground">
+            <Bell class="h-3.5 w-3.5 text-warning" />
+            Customer has been called — start their service or recall / skip them.
+          </p>
+          <button
+            :disabled="acting"
+            class="btn btn-md btn-primary w-full !py-3.5"
+            @click="handleStart"
+          >
+            <Loader2 v-if="acting" class="h-4 w-4 animate-spin" />
+            <Play v-else class="h-4 w-4" />
+            Start Service
+          </button>
+          <div class="mt-3 grid grid-cols-2 gap-3">
             <button
               :disabled="acting"
-              class="btn btn-md btn-outline flex-1"
+              class="btn btn-md btn-outline"
               @click="handleRecall"
             >
               <Loader2 v-if="acting" class="h-4 w-4 animate-spin" />
               <Bell v-else class="h-4 w-4" />
               Recall
-            </button>
-            <button
-              v-if="ticket.status === 'CALLED'"
-              :disabled="acting"
-              class="btn btn-md btn-ghost-danger"
-              @click="handleNoShow"
-            >
-              <Loader2 v-if="acting" class="h-4 w-4 animate-spin" />
-              <XCircle v-else class="h-4 w-4" />
-              No Show
             </button>
             <button
               :disabled="acting"
@@ -234,6 +242,36 @@ const timeline = computed(() => {
               Skip
             </button>
           </div>
+          <div class="mt-3 flex items-center gap-3">
+            <span class="h-px flex-1 bg-border" />
+            <span class="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Destructive</span>
+            <span class="h-px flex-1 bg-border" />
+          </div>
+          <button
+            :disabled="acting"
+            class="btn btn-md btn-ghost-danger mt-3 w-full"
+            @click="handleNoShow"
+          >
+            <Loader2 v-if="acting" class="h-4 w-4 animate-spin" />
+            <XCircle v-else class="h-4 w-4" />
+            Mark as No Show
+          </button>
+        </template>
+
+        <template v-else-if="ticket.status === 'IN_SERVICE'">
+          <p class="mb-3 flex items-center gap-1.5 text-xs font-semibold text-muted-foreground">
+            <CheckCircle2 class="h-3.5 w-3.5 text-success" />
+            Service in progress — press Complete when the customer is done.
+          </p>
+          <button
+            :disabled="acting"
+            class="btn btn-md btn-success w-full !py-3.5"
+            @click="handleComplete"
+          >
+            <Loader2 v-if="acting" class="h-4 w-4 animate-spin" />
+            <CheckCircle2 v-else class="h-4 w-4" />
+            Complete Service
+          </button>
         </template>
 
         <template v-else-if="ticket.status === 'WAITING'">
@@ -244,9 +282,7 @@ const timeline = computed(() => {
 
         <template v-else>
           <div class="flex items-center gap-2.5 rounded-xl bg-muted p-3.5">
-            <svg class="h-4 w-4 flex-shrink-0 text-muted-foreground" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
+            <CheckCircle2 class="h-4 w-4 flex-shrink-0 text-muted-foreground" />
             <p class="text-sm text-muted-foreground">No further actions available for this ticket.</p>
           </div>
         </template>
@@ -254,6 +290,15 @@ const timeline = computed(() => {
         <p v-if="errorMsg" class="mt-3 text-xs text-danger">{{ errorMsg }}</p>
       </div>
     </div>
+
+    <ConfirmModal
+      v-if="confirmState"
+      :title="confirmState.title"
+      :body="confirmState.body"
+      :confirm-label="confirmState.label"
+      @confirm="runConfirmed"
+      @cancel="confirmState = null"
+    />
   </div>
 
   <div v-else class="space-y-5">
